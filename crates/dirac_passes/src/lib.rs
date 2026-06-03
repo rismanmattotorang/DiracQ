@@ -1,4 +1,4 @@
-//! `dirac.chem` — ParagonCorp domain HUGR extension and tket2 rewrite passes
+//! `dirac.chem` — Dirac Technologies domain HUGR extension and tket2 rewrite passes
 //! (§8.2, ADR-05).
 //!
 //! These name chemistry macro-operations (a fermionic-excitation block, a UCC
@@ -32,7 +32,7 @@ use tket2::Circuit;
 /// reducing two-qubit-gate count before the vendor's Helios preparation.
 ///
 /// Mirrors the spec's `dirac_chem_optimise`: reuse a tket2 rewrite, then apply
-/// the two ParagonCorp-specific rewrites.
+/// the two Dirac Technologies-specific rewrites.
 pub fn dirac_chem_optimise(circ: &mut Circuit) {
     apply_greedy_commutation(circ);
     fuse_ucc_rotations(circ);
@@ -45,12 +45,12 @@ fn apply_greedy_commutation(_circ: &mut Circuit) {
     tket2::passes::apply_greedy_commutation(_circ);
 }
 
-/// ParagonCorp-specific: fuse adjacent UCC rotation blocks.
+/// Dirac Technologies-specific: fuse adjacent UCC rotation blocks.
 fn fuse_ucc_rotations(_circ: &mut Circuit) {
     // TODO(Workstream H): implement against the real HUGR/tket2 IR.
 }
 
-/// ParagonCorp-specific: group commuting Pauli measurements into fewer
+/// Dirac Technologies-specific: group commuting Pauli measurements into fewer
 /// measurement settings.
 fn group_pauli_measurements(_circ: &mut Circuit) {
     // TODO(Workstream H): implement against the real HUGR/tket2 IR.

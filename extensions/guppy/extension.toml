@@ -3,7 +3,7 @@ name = "Guppy (DiracQ)"
 description = "First-class Guppy editing for DiracQ: syntax, highlighting, indentation, brackets, and the DiracQ Guppy LSP."
 version = "0.1.0"
 schema_version = 1
-authors = ["ParagonCorp Quantum Initiative — DiracQ team"]
+authors = ["Dirac Technologies — DiracQ team"]
 repository = "https://github.com/rismanmattotorang/diracq"
 
 [language_servers.diracq-guppy-lsp]

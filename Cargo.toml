@@ -33,7 +33,7 @@ exclude = ["extensions/guppy"]
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-authors = ["ParagonCorp Quantum Initiative — DiracQ team"]
+authors = ["Dirac Technologies — DiracQ team"]
 repository = "https://github.com/rismanmattotorang/diracq"
 
 [workspace.dependencies]
