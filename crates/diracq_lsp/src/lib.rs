@@ -12,8 +12,10 @@ use diracq_services::emulate::ResourceMetrics;
 pub mod analyzer;
 pub mod protocol;
 pub mod server;
+pub mod worker;
 
 pub use analyzer::HeuristicAnalyzer;
+pub use worker::{FallbackAnalyzer, WorkerAnalyzer};
 
 /// A diagnostic mapped from a guppylang error object to an LSP range.
 #[derive(Debug, Clone)]
