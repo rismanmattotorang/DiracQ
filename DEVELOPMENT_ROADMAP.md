@@ -187,15 +187,22 @@ Each maps to a crate/service with a typed interface and an acceptance test.
   the `langgraph` `StateGraph` (`graph.py`) for checkpointed runtime; replace the
   offline `DefaultAgents` with real retriever/FM/code-gen/validate calls.
 
-### Workstream F — Document-to-circuit generation — *scaffolded*
+### Workstream F — Document-to-circuit generation — *in progress (P3)*
 - **Seam:** An Athena tool backed by the HF sidecar (parsing/embedding) and
   guppylang (validation). **Pipeline:** extract → identify circuit/algorithm →
   draft Guppy from validated templates → `check()` → emulate → self-repair.
 - **Acceptance:** Given a paper describing Bell/teleportation, the tool returns
   Guppy that type-checks and reproduces the expected distribution on Selene; a
   generation that fails `check()` is repaired or rejected, never surfaced as "done".
-- **TODO:** PDF/LaTeX extractor → structured circuit spec; spec→Guppy templates
-  with the validation gate; self-repair feeding `check()` errors back to the model.
+- **Done:** the full pipeline (`doc2circuit.py`): a keyword `extract_spec`
+  (recognises bell/ghz/teleport/vqe + qubit budget), `render` from **validated
+  Guppy templates** (`templates.py`), and a self-repair loop that falls back to
+  the simplest known-good template — ending **`rejected`** if nothing validates
+  (never "done"). Wired into the orchestrator's `code_gen` so a brief drives
+  generation. The validator is injected (default: a structural check that flags
+  use-after-measure). Tested (7 cases).
+- **TODO:** real PDF/LaTeX extractor; swap the structural validator for the
+  guppylang worker + Selene; feed real `check()` errors back to a model.
 
 ### Workstream G — Multimodal synthesis & HF inference — *scaffolded*
 - **Seam:** Athena tools + the Python inference sidecar (`diracq_sidecar.inference`).

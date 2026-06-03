@@ -116,15 +116,13 @@ class DefaultAgents:
         return state
 
     def code_gen(self, state: DiracQState) -> DiracQState:
-        # A validated template (never a blank page); see §9.2.
-        state["guppy_src"] = (
-            "from guppylang import guppy, qubit\n\n"
-            "@guppy\n"
-            "def ansatz() -> bool:\n"
-            "    q = qubit()\n"
-            "    h(q)\n"
-            "    return measure(q)\n"
-        )
+        # Instantiate a validated template from the brief (never a blank page);
+        # see §9.2 and Workstream F. The orchestrator's validate node owns the
+        # gate, so generation itself does not re-validate here.
+        from athena.doc2circuit import document_to_circuit
+
+        result = document_to_circuit(state.get("brief", ""), validate=False)
+        state["guppy_src"] = result.guppy_src
         return state
 
     def validate(self, state: DiracQState) -> DiracQState:
