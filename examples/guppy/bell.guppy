@@ -1,0 +1,12 @@
+# A valid Bell-state kernel. The DiracQ Guppy LSP reports no diagnostics:
+# every qubit is used live and measured exactly once.
+from guppylang import guppy, qubit
+
+
+@guppy
+def bell() -> tuple[bool, bool]:
+    a = qubit()
+    b = qubit()
+    h(a)
+    cx(a, b)
+    return measure(a), measure(b)

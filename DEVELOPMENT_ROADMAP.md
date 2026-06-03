@@ -118,15 +118,23 @@ Each maps to a crate/service with a typed interface and an acceptance test.
   `Worktree` are in place. **TODO:** generate the real `tree-sitter-guppy`
   grammar and pin its commit.
 
-### Workstream B — Guppy LSP and HUGR-aware analysis — *scaffolded*
+### Workstream B — Guppy LSP and HUGR-aware analysis — *in progress (M1)*
 - **Seam:** Native Rust service (`crates/diracq_lsp`) + a Python `guppylang`
   worker (`sidecar/.../guppy_worker.py`). **Interface:** `GuppyAnalysis` trait
   (`check` / `compile_summary` / `resources`).
 - **Acceptance:** On the teleportation example, `check` returns zero diagnostics
   and `compile_summary` reports the expected qubit width; a buffer that drops a
   qubit yields a precise diagnostic with the offending range.
-- **TODO:** the stdio LSP loop, the JSON-RPC worker protocol, guppylang
-  error→`Diagnostic` range mapping, idle-debounced checks on the background executor.
+- **Done:** the **stdio LSP server loop** (`server.rs`: initialize →
+  didOpen/didChange/didClose → `publishDiagnostics` → shutdown/exit), the
+  dependency-free **LSP framing + byte-offset→position mapping** (`protocol.rs`),
+  and a pure-Rust **heuristic linear-type analyzer** (`analyzer.rs`) that flags
+  use-after-measure / double-measure inline. Verified end-to-end against the
+  compiled `diracq-guppy-lsp` binary and by unit tests. This already satisfies
+  the "deliberate linear-type violation surfaces a diagnostic" half of M1.
+- **TODO:** swap the heuristic for the authoritative `guppylang` worker over the
+  JSON-RPC bridge (ground-truth diagnostics, `compile_summary`, `resources`);
+  idle-debounce checks on the background executor; hover/completion bodies.
 
 ### Workstream C — Selene emulation panel (fork crate) — *scaffolded*
 - **Seam:** Fork crate `crates/diracq_selene` (GPUI view + entity); emulation
