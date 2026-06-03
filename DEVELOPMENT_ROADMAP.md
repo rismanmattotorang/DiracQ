@@ -138,15 +138,22 @@ Each maps to a crate/service with a typed interface and an acceptance test.
   JSON-RPC bridge (ground-truth diagnostics, `compile_summary`, `resources`);
   idle-debounce checks on the background executor; hover/completion bodies.
 
-### Workstream C — Selene emulation panel (fork crate) — *scaffolded*
+### Workstream C — Selene emulation panel (fork crate) — *in progress (M2)*
 - **Seam:** Fork crate `crates/diracq_selene` (GPUI view + entity); emulation
   off-thread on the `BackgroundExecutor`. **Interface:** `EmulationService` trait;
   `EmulateRequest`/`EmulateResult` payloads.
 - **Acceptance:** A Bell program yields counts on `00`/`11`; the depolarizing
   model introduces a small `01`/`10` fraction; identical seeds reproduce
   identical counts; the UI stays at 120 fps during a 16–20 qubit run.
+- **Done:** the emulation **service layer** (`service.rs`): `SidecarEmulationService`
+  relays `selene.emulate` over an injected `Transport`, and a deterministic
+  `MockEmulationService` (SplitMix64) provides reproducible counts before
+  selene-sim is wired. The Python sidecar's `selene.emulate` answers with a real
+  selene-sim run when installed, else the same deterministic mock (provenance
+  stamped `selene = "mock"`). The shared length-prefixed JSON framing now lives
+  in `diracq_services::framing`. Reproducibility (G7) is unit-tested on both sides.
 - **TODO:** the `Render` impl + histogram element (behind `--features gpui`), the
-  sidecar `selene.emulate` driver with `selene.shot` streaming, the DiracNoise plugin.
+  real selene-sim driver with `selene.shot` streaming, the DiracNoise plugin.
 
 ### Workstream D — HUGR & circuit GPU canvases (fork crates) — *scaffolded*
 - **Seam:** Fork crates `crates/diracq_hugr` + `crates/diracq_circuit`, each a

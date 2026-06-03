@@ -13,7 +13,6 @@
 //!   missing/erroring worker degrades to the pure-Rust heuristic instead of
 //!   leaving the editor with no diagnostics.
 
-use std::io::{Read, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::sync::Mutex;
 
@@ -21,30 +20,7 @@ use serde_json::{json, Value};
 
 use crate::{Diagnostic, GuppyAnalysis, HugrSummary, Severity};
 use diracq_services::emulate::ResourceMetrics;
-
-/// Write one length-prefixed JSON frame.
-pub fn write_frame<W: Write>(w: &mut W, msg: &Value) -> anyhow::Result<()> {
-    let body = serde_json::to_vec(msg)?;
-    let len = (body.len() as u32).to_be_bytes();
-    w.write_all(&len)?;
-    w.write_all(&body)?;
-    w.flush()?;
-    Ok(())
-}
-
-/// Read one length-prefixed JSON frame. Returns `Ok(None)` on clean EOF.
-pub fn read_frame<R: Read>(r: &mut R) -> anyhow::Result<Option<Value>> {
-    let mut len = [0u8; 4];
-    match r.read_exact(&mut len) {
-        Ok(()) => {}
-        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => return Ok(None),
-        Err(e) => return Err(e.into()),
-    }
-    let n = u32::from_be_bytes(len) as usize;
-    let mut body = vec![0u8; n];
-    r.read_exact(&mut body)?;
-    Ok(Some(serde_json::from_slice(&body)?))
-}
+use diracq_services::framing::{read_frame, write_frame};
 
 /// Map a worker `check` result array into LSP [`Diagnostic`]s.
 fn map_diagnostics(result: &Value) -> Vec<Diagnostic> {

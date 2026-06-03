@@ -13,6 +13,7 @@ pub mod agent;
 pub mod compile;
 pub mod emulate;
 pub mod error;
+pub mod framing;
 pub mod model;
 pub mod molecular;
 

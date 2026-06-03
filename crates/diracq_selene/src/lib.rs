@@ -12,6 +12,9 @@
 use async_trait::async_trait;
 use diracq_services::emulate::{EmulateRequest, EmulateResult};
 
+pub mod service;
+pub use service::{MockEmulationService, SidecarEmulationService, Transport};
+
 /// L4 service contract the panel (L6 view) talks to, implemented over the
 /// Python sidecar that drives selene-sim.
 #[async_trait]
