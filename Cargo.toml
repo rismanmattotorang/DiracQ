@@ -1,0 +1,59 @@
+# DiracQ — Cargo workspace (additive-delta over a pinned Zed fork).
+#
+# Per ADR-00 / ADR-01 and design goal G4 ("open-stack, no fork drift"), this
+# workspace NEVER edits Zed in place. Upstream Zed is vendored as a pinned
+# dependency under `third_party/zed` (see scripts/vendor-zed.sh) and all DiracQ
+# code lives in the additive `crates/diracq_*` and `crates/dirac_*` crates plus
+# the WASM extension under `extensions/`.
+#
+# The four GPU "fork crates" (diracq_selene, diracq_hugr, diracq_circuit,
+# diracq_mol) gate their GPUI views behind the `gpui` feature so this workspace
+# `cargo check`s standalone — before Zed is vendored — and only links GPUI once
+# the editor binary is present.
+
+[workspace]
+resolver = "2"
+members = [
+    "crates/diracq_services",  # L4 service traits + IPC payload types
+    "crates/diracq_viz",       # render models for circuit/HUGR canvases
+    "crates/diracq_lsp",       # Guppy LSP (Rust front, Python guppylang worker)
+    "crates/diracq_compile",   # TKET compile service binding
+    "crates/dirac_passes",     # tket2/hugr domain extension passes (dirac.chem)
+    "crates/diracq_selene",    # Selene emulation panel (fork crate, GPU)
+    "crates/diracq_hugr",      # HUGR graph canvas (fork crate, GPU)
+    "crates/diracq_circuit",   # circuit canvas (fork crate, GPU)
+    "crates/diracq_mol",       # molecule viewer (fork crate, GPU)
+    "crates/diracq_app",       # glue: registers panels/actions into the fork
+]
+# The Guppy WASM extension is its own workspace (wasm32-wasip2 target,
+# zed_extension_api) and ships on an independent cadence (ADR-00).
+exclude = ["extensions/guppy"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["ParagonCorp Quantum Initiative — DiracQ team"]
+repository = "https://github.com/rismanmattotorang/diracq"
+
+[workspace.dependencies]
+# Common, light dependencies shared across the additive DiracQ crates.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+async-trait = "0.1"
+thiserror = "1"
+anyhow = "1"
+
+# Internal crates.
+diracq_services = { path = "crates/diracq_services" }
+diracq_viz = { path = "crates/diracq_viz" }
+
+# Quantinuum stack and GPUI are pulled in only once Zed is vendored and the
+# `gpui` feature is enabled; see docs/compatibility-matrix.md for the pins.
+# tauri       = { version = "2", features = ["protocol-asset"] }
+# gpui        = { path = "third_party/zed/crates/gpui" }
+# tket2       = "..."  # pinned together with hugr (see ADR-05)
+# hugr        = "..."
+
+[profile.release]
+lto = "thin"

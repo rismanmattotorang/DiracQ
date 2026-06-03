@@ -1,0 +1,17 @@
+[package]
+name = "dirac_passes"
+description = "DiracQ dirac.chem HUGR extension + tket2 rewrite passes (UCC fusion, Pauli-measurement grouping) that slot before qsystem prep."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+# Enables the real tket2/hugr bindings; off by default so the workspace checks
+# standalone before the pinned (tket2, hugr) pair is vendored.
+tket2 = []
+
+[dependencies]
+diracq_services.workspace = true

@@ -1,0 +1,22 @@
+[project]
+name = "diracq-athena"
+version = "0.1.0"
+description = "Athena — DiracQ's agentic orchestrator, exposed as an ACP-compatible agent server so it plugs into Zed's existing agent panel."
+requires-python = ">=3.11,<3.13"
+license = { text = "Apache-2.0" }
+authors = [{ name = "ParagonCorp Quantum Initiative — DiracQ team" }]
+
+dependencies = [
+    "agent-client-protocol",  # ACP schema (pin in compatibility matrix)
+    "langgraph",              # explicit state-graph orchestration (ADR-06)
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+diracq-athena = "athena.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

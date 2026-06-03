@@ -1,0 +1,30 @@
+# Rust
+/target
+**/target
+Cargo.lock
+
+# Vendored upstream Zed fork base — a PINNED dependency, never committed source
+# (ADR-00/G4). Fetch it with scripts/vendor-zed.sh.
+/third_party/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Tauri generated
+/src-tauri/gen/
+/src-tauri/target/
+
+# OS / editor
+.DS_Store
+*.swp
+
+# Extracted spec text (regenerate with pdftotext)
+/ParaQ.txt
+
+# WASM extension build output
+/extensions/*/grammars/

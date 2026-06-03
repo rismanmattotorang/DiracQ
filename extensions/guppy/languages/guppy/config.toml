@@ -1,0 +1,14 @@
+name = "Guppy"
+grammar = "guppy"
+path_suffixes = ["guppy"]
+line_comments = ["# "]
+autoclose_before = ";:.,=}])>"
+tab_size = 4
+hard_tabs = false
+
+[brackets]
+"(" = ")"
+"[" = "]"
+"{" = "}"
+'"' = '"'
+"'" = "'"

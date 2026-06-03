@@ -1,0 +1,17 @@
+# DiracQ pins the same Rust toolchain as the upstream Zed fork base so the
+# additive crates and the editor binary build identically (G4, ADR-01).
+#
+# Snapshot at authoring time (re-verify against zed-industries/zed's own
+# rust-toolchain.toml on each upstream rebase — see docs/compatibility-matrix.md):
+#   - Rust 1.95.0 (stable)
+#   - extra targets: wasm32-wasip2 (WASM extensions), wasm32-unknown-unknown
+#     (GPUI on the web), x86_64-unknown-linux-musl (remote server)
+[toolchain]
+channel = "1.95.0"
+components = ["rust-analyzer", "clippy", "rustfmt"]
+targets = [
+    "wasm32-wasip2",
+    "wasm32-unknown-unknown",
+    "x86_64-unknown-linux-musl",
+]
+profile = "minimal"

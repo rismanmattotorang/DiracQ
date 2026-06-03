@@ -1,0 +1,18 @@
+[package]
+name = "diracq_selene"
+description = "DiracQ Selene emulation panel (fork crate): dockable GPUI view that streams shot histograms and resource metrics off the UI thread."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+# Links GPUI and implements the Render view; enabled only once Zed is vendored.
+gpui = []
+
+[dependencies]
+diracq_services.workspace = true
+async-trait.workspace = true
+anyhow.workspace = true
