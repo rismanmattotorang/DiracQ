@@ -1,0 +1,12 @@
+# A deliberate linear-type violation for the M1 demo. The DiracQ Guppy LSP
+# flags `h(q)` on the last line: `q` was already consumed by `measure(q)`,
+# so reusing it violates no-cloning / linear typing.
+from guppylang import guppy, qubit
+
+
+@guppy
+def broken() -> bool:
+    q = qubit()
+    r = measure(q)
+    h(q)  # <-- use-after-measure: `q` is no longer live
+    return r

@@ -9,6 +9,12 @@
 
 use diracq_services::emulate::ResourceMetrics;
 
+pub mod analyzer;
+pub mod protocol;
+pub mod server;
+
+pub use analyzer::HeuristicAnalyzer;
+
 /// A diagnostic mapped from a guppylang error object to an LSP range.
 #[derive(Debug, Clone)]
 pub struct Diagnostic {
