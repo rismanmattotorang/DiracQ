@@ -155,14 +155,20 @@ Each maps to a crate/service with a typed interface and an acceptance test.
 - **TODO:** the `Render` impl + histogram element (behind `--features gpui`), the
   real selene-sim driver with `selene.shot` streaming, the DiracNoise plugin.
 
-### Workstream D — HUGR & circuit GPU canvases (fork crates) — *scaffolded*
+### Workstream D — HUGR & circuit GPU canvases (fork crates) — *in progress (M3)*
 - **Seam:** Fork crates `crates/diracq_hugr` + `crates/diracq_circuit`, each a
   custom GPUI `Element`. **Interface:** `LayoutEngine` → `CircuitLayout` / `GraphLayout`.
 - **Acceptance:** A 20-gate circuit renders and pans/zooms without jank;
   collapsing a HUGR region hides children and preserves boundary edges; selecting
   a gate highlights the source span in the editor (bidirectional mapping).
-- **TODO:** column-assignment layout from a HUGR dataflow region; the GPUI
-  `Element` with hit-testing; selection↔editor-buffer bridge via the project API.
+- **Done:** the pure-Rust **layout algorithms** (unit-tested, no GPUI):
+  `diracq_circuit::layout_ops` — column assignment (independent gates pack into a
+  column; dependent gates serialise; 2-qubit gates block both wires) carrying
+  per-gate `span` for selection mapping; and `diracq_hugr::layout_dag` —
+  longest-path rank assignment with per-rank rows and region-crossing edge
+  detection for collapse/expand.
+- **TODO:** decode a real HUGR into `GateOp`s / nodes+edges; the GPUI `Element`s
+  (drawing, pan/zoom, hit-testing → editor selection) behind `--features gpui`.
 
 ### Workstream E — Athena as an ACP agent server — *scaffolded*
 - **Seam:** ACP agent server process `agents/athena` implementing the surface
