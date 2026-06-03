@@ -204,16 +204,21 @@ Each maps to a crate/service with a typed interface and an acceptance test.
 - **TODO:** real PDF/LaTeX extractor; swap the structural validator for the
   guppylang worker + Selene; feed real `check()` errors back to a model.
 
-### Workstream G — Multimodal synthesis & HF inference — *scaffolded*
+### Workstream G — Multimodal synthesis & HF inference — *in progress (P3)*
 - **Seam:** Athena tools + the Python inference sidecar (`diracq_sidecar.inference`).
   **Interface:** `InferenceService` (`embed`, `relax_geometry`, `rank_candidates`,
   `predict_structure`) + the licence-enforcing model registry.
 - **Acceptance:** A SMILES input is relaxed and ranked; only the top candidate is
   handed to a generated VQE program; the registry **refuses** a model used outside
   its licence (a governance check, not optional).
-- **Status:** the registry + refusal path (`ModelNotAllowed`) and the molecular
-  `mol.parse` entry are scaffolded. **TODO:** the FastAPI/JSON-RPC inference
-  bodies, MLIP relaxation, pre-screen gating.
+- **Done:** the licence/revision registry + refusal path (`ModelNotAllowed`); a
+  dependency-free **`.xyz` molecular parser** (`mol.parse`) producing the
+  canonical `Molecule` record with G7 provenance (sha256 + parser version), with
+  SMILES/PDB/MOL gated on RDKit; and `synth.py`'s `multimodal_synthesis` —
+  **pre-screen gating** so only survivors (top-k above threshold) reach the VQE
+  ansatz, skipping the quantum step entirely when nothing passes (G3). Tested.
+- **TODO:** the real inference bodies (MLIP relaxation, ESM/Boltz), RDKit
+  SMILES/PDB parsing, and wiring the pre-screen to the FM sidecar.
 
 ### Workstream H — TKET compile integration — *in progress (M2)*
 - **Seam:** Rust service `crates/diracq_compile` over a pytket/tket2 Python
