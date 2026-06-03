@@ -1,26 +1,38 @@
-; tree-sitter-guppy highlights (extends the Python base).
-; Guppy is Python with decorators and a linear type discipline; this query adds
-; the Guppy-specific surface: the @guppy decorator family, qubit/array/angle
-; types, and the quantum builtins.
+; Guppy highlights — layered on the upstream tree-sitter-python parse tree.
+; Guppy is Python syntactically, so node types below are tree-sitter-python's;
+; these queries add the Guppy-specific surface (decorators, quantum types and
+; builtins) on top of ordinary Python highlighting.
 
-; @guppy decorator family
+; ── The @guppy decorator family ───────────────────────────────────────────
+; @guppy
 (decorator (identifier) @function.macro
-  (#match? @function.macro "guppy"))
+  (#match? @function.macro "^guppy$"))
+; @guppy.declare / @guppy.struct / etc.
+(decorator (attribute object: (identifier) @function.macro)
+  (#match? @function.macro "^guppy$"))
 
-; Guppy builtin types
+; ── Guppy builtin types in annotations ─────────────────────────────────────
+; e.g. `q: qubit`, `xs: array[qubit, n]`, `theta: angle`
 (type (identifier) @type.builtin
-  (#any-of? @type.builtin "qubit" "array" "angle"))
+  (#any-of? @type.builtin "qubit" "array" "angle" "bool" "int" "float"))
+(type (subscript value: (identifier) @type.builtin)
+  (#any-of? @type.builtin "array"))
 
-; Quantum builtins
+; ── Quantum builtin operations ─────────────────────────────────────────────
 (call function: (identifier) @function.builtin
-  (#any-of? @function.builtin "h" "cx" "rz" "measure"))
+  (#any-of? @function.builtin
+    "h" "x" "y" "z" "s" "t" "sdg" "tdg" "cx" "cz"
+    "rx" "ry" "rz" "measure" "reset" "qubit" "discard"))
 
-; Annotations such as @owned / comptime
+; ── @owned / comptime annotations ──────────────────────────────────────────
 ((identifier) @keyword
   (#any-of? @keyword "owned" "comptime"))
 
-; Fall back to the Python base for everything else.
+; ── Generic Python fallbacks ───────────────────────────────────────────────
+(function_definition name: (identifier) @function)
+(call function: (identifier) @function)
 (comment) @comment
 (string) @string
 (integer) @number
 (float) @number
+[ "def" "return" "if" "else" "elif" "for" "while" "with" "import" "from" ] @keyword

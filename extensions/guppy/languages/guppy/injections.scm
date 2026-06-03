@@ -1,6 +1,4 @@
-; tree-sitter-guppy injections.
-; Guppy embeds Python; docstrings and embedded fragments are highlighted as
-; Python so the base language tooling applies inside Guppy kernels.
-
-((string) @injection.content
-  (#set! injection.language "python"))
+; Guppy injections.
+; The whole buffer is parsed by the Python grammar already, so no language
+; injection is required for Guppy itself. This file is intentionally minimal;
+; add injections here only for genuinely foreign embedded languages.

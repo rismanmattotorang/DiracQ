@@ -11,7 +11,11 @@ name = "DiracQ Guppy LSP"
 languages = ["Guppy"]
 
 [grammars.guppy]
-# Guppy is Python-embedded; the grammar extends a Python base with the
-# Guppy-specific surface. Pin to a concrete rev before release.
-repository = "https://github.com/rismanmattotorang/tree-sitter-guppy"
-commit = "0000000000000000000000000000000000000000"
+# Guppy IS syntactically Python (decorators + a linear type discipline), so we
+# reuse the upstream tree-sitter-python grammar verbatim and layer Guppy-aware
+# highlight/indent queries on top (see languages/guppy/*.scm). This is the
+# correct, low-maintenance choice per G4/ADR-00: adopt upstream, never fork a
+# parser — and it sidesteps reimplementing Python's indentation scanner.
+# Pinned to tree-sitter-python v0.23.6 (re-verify on upgrade).
+repository = "https://github.com/tree-sitter/tree-sitter-python"
+commit = "bffb65a8cfe4e46290331dfef0dbf0ef3679de11"

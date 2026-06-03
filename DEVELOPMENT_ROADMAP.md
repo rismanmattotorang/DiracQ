@@ -108,15 +108,17 @@ permissions.
 
 Each maps to a crate/service with a typed interface and an acceptance test.
 
-### Workstream A — Guppy language extension (WASM) — *scaffolded*
+### Workstream A — Guppy language extension (WASM) — *done (M1)*
 - **Seam:** WASM extension via `zed_extension_api`. **Creates:** `extensions/guppy/`.
 - **Acceptance:** Install as a dev extension; open a `.guppy` file; verify
   highlighting, that the LSP starts, and that a deliberate linear-type violation
   (reusing a measured qubit) surfaces a diagnostic.
-- **Status:** `extension.toml`, language config, `highlights/injections/indents.scm`,
-  and the `Extension` impl that locates `diracq-guppy-lsp` via the sandbox-safe
-  `Worktree` are in place. **TODO:** generate the real `tree-sitter-guppy`
-  grammar and pin its commit.
+- **Done:** `extension.toml`, language config, the `Extension` impl that locates
+  `diracq-guppy-lsp` via the sandbox-safe `Worktree`, and the Guppy-aware
+  `highlights/indents/injections.scm`. The grammar **reuses the pinned upstream
+  `tree-sitter-python`** (v0.23.6) with Guppy queries layered on top — the G4/
+  ADR-00 choice (adopt upstream; no forked parser, no reimplemented indentation
+  scanner). See `extensions/guppy/README.md`.
 
 ### Workstream B — Guppy LSP and HUGR-aware analysis — *in progress (M1)*
 - **Seam:** Native Rust service (`crates/diracq_lsp`) + a Python `guppylang`

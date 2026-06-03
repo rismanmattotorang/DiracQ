@@ -1,4 +1,7 @@
-; tree-sitter-guppy indents (Python-style block indentation).
+; Guppy indents — tree-sitter-python node types. Zed uses these to decide
+; auto-indentation; Python's block structure drives Guppy's the same way.
+(block) @indent
+
 [
   (function_definition)
   (class_definition)
@@ -7,5 +10,3 @@
   (while_statement)
   (with_statement)
 ] @indent
-
-(block) @indent
