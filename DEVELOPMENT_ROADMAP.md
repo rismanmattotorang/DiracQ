@@ -170,14 +170,22 @@ Each maps to a crate/service with a typed interface and an acceptance test.
 - **TODO:** decode a real HUGR into `GateOp`s / nodes+edges; the GPUI `Element`s
   (drawing, pan/zoom, hit-testing → editor selection) behind `--features gpui`.
 
-### Workstream E — Athena as an ACP agent server — *scaffolded*
+### Workstream E — Athena as an ACP agent server — *in progress (P3)*
 - **Seam:** ACP agent server process `agents/athena` implementing the surface
   Zed's `AgentConnection` expects (no bespoke chat UI). **Interface:** `AcpAgent`
   (session lifecycle + streaming `prompt`).
 - **Acceptance:** From Zed's agent panel, "new DiracQ thread" connects; a prompt
   streams a plan and tool calls; two threads run in parallel; cancellation honored.
-- **TODO:** ACP server scaffold against `agent-client-protocol`, session lifecycle,
-  streaming prompt, tool-call events.
+- **Done:** the deterministic, dependency-injected **orchestration loop**
+  (`orchestrator.py`, plan→retrieve→pre_screen→code_gen→validate→report) enforcing
+  the two spec invariants — the **validation gate** (fail→repair up to N, else
+  *rejected*, never "done") and the **human gate** (a hardware backend pauses
+  `awaiting_approval` until approved). The **ACP `AthenaAgent`** supports parallel
+  sessions, a streaming gate-aware `prompt`, and cancellation. Tested (7 cases)
+  without langgraph/LLM.
+- **TODO:** bind to the `agent-client-protocol` stdio schema; wrap the nodes in
+  the `langgraph` `StateGraph` (`graph.py`) for checkpointed runtime; replace the
+  offline `DefaultAgents` with real retriever/FM/code-gen/validate calls.
 
 ### Workstream F — Document-to-circuit generation — *scaffolded*
 - **Seam:** An Athena tool backed by the HF sidecar (parsing/embedding) and
