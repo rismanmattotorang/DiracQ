@@ -16,6 +16,7 @@ pub mod error;
 pub mod framing;
 pub mod model;
 pub mod molecular;
+pub mod transport;
 
 pub use error::ServiceError;
 

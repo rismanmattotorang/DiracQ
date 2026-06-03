@@ -194,15 +194,26 @@ Each maps to a crate/service with a typed interface and an acceptance test.
   `mol.parse` entry are scaffolded. **TODO:** the FastAPI/JSON-RPC inference
   bodies, MLIP relaxation, pre-screen gating.
 
-### Workstream H — TKET compile integration — *scaffolded*
+### Workstream H — TKET compile integration — *in progress (M2)*
 - **Seam:** Rust service `crates/diracq_compile` over a pytket/tket2 Python
   worker + palette/Athena actions. **Domain passes:** `crates/dirac_passes`
   (`dirac.chem` HUGR extension + tket2 rewrites that slot *before* qsystem prep).
 - **Acceptance:** Compiling a chemistry ansatz reduces entangling-gate count vs.
   the unoptimised circuit; the qsystem pass runs last; the diff view shows
   before/after metrics.
-- **TODO:** the `tket.compile` worker body; pass-by-pass resource metrics; a CI
-  check pinning the tket2/qsystem version against upstream renames.
+- **Done:** `CompileBackend` with `SidecarCompileBackend<T: Transport>` (relays
+  `tket.compile`) and a deterministic `MockCompileBackend` that reports
+  before/after `ResourceMetrics` showing the dirac.chem entangling-gate
+  reduction, plus the Mermaid string for the circuit view. The sidecar
+  `tket.compile` runs real pytket/tket2 when installed, else the same mock.
+  Tested on both sides (the diff shows fewer two-qubit gates with passes on).
+- **TODO:** the real `guppy.compile → tket2 passes → dirac.chem → qsystem` body;
+  pass-by-pass metrics; a CI check pinning tket2/qsystem against upstream renames.
+
+> With Workstreams A, B, C and H landed (mock-backed where the heavy stack isn't
+> installed), the **M2 "author → compile → emulate" loop is exercisable
+> end-to-end and reproducibly** — the real selene-sim/tket2 drivers and the GPUI
+> panels are the remaining work to make it physical and visual.
 
 ---
 

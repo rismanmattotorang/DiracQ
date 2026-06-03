@@ -16,16 +16,10 @@
 use std::collections::BTreeMap;
 
 use async_trait::async_trait;
-use serde_json::Value;
 
 use crate::EmulationService;
 use diracq_services::emulate::{EmulateRequest, EmulateResult, ResourceMetrics};
-
-/// A synchronous JSON-RPC transport to the sidecar. Implemented by the host
-/// (e.g. over the length-prefixed stdio bridge in `diracq_services::framing`).
-pub trait Transport: Send + Sync {
-    fn call(&self, method: &str, params: Value) -> anyhow::Result<Value>;
-}
+pub use diracq_services::transport::Transport;
 
 /// Relays emulation to the Python sidecar's `selene.emulate` method.
 pub struct SidecarEmulationService<T: Transport> {
