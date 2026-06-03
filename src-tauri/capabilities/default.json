@@ -1,0 +1,14 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "diracq-default",
+  "description": "Least-privilege default capability set for DiracQ. Paid or irreversible actions (hw:submit, fs:write) are NOT here — they are separately granted and gated behind a satisfied human approval (§13.2).",
+  "windows": ["main"],
+  "permissions": [
+    "core:event:default",
+    "diracq:quantum-compile",
+    "diracq:quantum-emulate",
+    "diracq:agent-run",
+    "diracq:model-infer",
+    "diracq:mol-parse"
+  ]
+}

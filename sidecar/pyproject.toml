@@ -1,0 +1,34 @@
+[project]
+name = "diracq-sidecar"
+version = "0.1.0"
+description = "DiracQ Python sidecar: Selene emulation, TKET compile, HuggingFace inference and molecular I/O behind a JSON-RPC 2.0 bridge."
+requires-python = ">=3.11,<3.13"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Dirac Technologies — DiracQ team" }]
+
+# Core dependency; heavy/optional ones live in extras so the sidecar starts and
+# its dispatcher is testable without the full quantum/ML stack installed.
+dependencies = [
+    "pydantic>=2",
+]
+
+[project.optional-dependencies]
+quantum = [
+    "guppylang>=0.21",   # bundles selene-sim; LSP ground truth
+    "selene-sim",        # matched to guppylang; QuEST/Stim backends
+    "pytket",            # bridge for legacy circuits
+    # tket2 / hugr are pinned together (ADR-05) — see docs/compatibility-matrix.md
+]
+inference = [
+    "transformers",      # HF inference runtime
+    "accelerate",
+    "rdkit",             # molecular parsing/sanitisation (ADR-07)
+]
+dev = ["pytest"]
+
+[project.scripts]
+diracq-sidecar = "diracq_sidecar.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,15 @@
+[package]
+name = "diracq_mol"
+description = "DiracQ molecule viewer (fork crate): WGPU-backed 3D viewer for canonical Molecule records from the molecular I/O pipeline."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+gpui = []
+
+[dependencies]
+diracq_services.workspace = true

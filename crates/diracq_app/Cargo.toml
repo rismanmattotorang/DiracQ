@@ -1,0 +1,27 @@
+[package]
+name = "diracq_app"
+description = "DiracQ glue: the single additive entry point that registers panels, actions and the Guppy language into the Zed fork (the entire fork delta)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+# Pulls in the GPUI views from the fork crates and wires them into Zed's
+# workspace; enabled in the editor binary build only.
+gpui = [
+    "diracq_selene/gpui",
+    "diracq_hugr/gpui",
+    "diracq_circuit/gpui",
+    "diracq_mol/gpui",
+]
+
+[dependencies]
+diracq_services.workspace = true
+diracq_selene = { path = "../diracq_selene" }
+diracq_hugr = { path = "../diracq_hugr" }
+diracq_circuit = { path = "../diracq_circuit" }
+diracq_mol = { path = "../diracq_mol" }
+diracq_compile = { path = "../diracq_compile" }

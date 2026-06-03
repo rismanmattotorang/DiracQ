@@ -1,0 +1,19 @@
+# Standalone workspace: this extension compiles to wasm32-wasip2 as a cdylib
+# and links zed_extension_api — it is NOT part of the DiracQ Cargo workspace
+# (ADR-00: WASM extensions ship on their own cadence).
+[package]
+name = "diracq-guppy-extension"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+path = "src/guppy.rs"
+
+[dependencies]
+# zed_extension_api 0.6.0 — pinned to the Zed fork's ABI (re-verify on rebase).
+zed_extension_api = "0.6.0"
+
+[workspace]

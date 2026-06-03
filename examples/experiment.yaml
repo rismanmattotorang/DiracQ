@@ -1,0 +1,13 @@
+# A declarative agentic experiment (§9.4). The orchestrator reads this, fills
+# the agent roles, and runs the validation loop of Fig. 4. Nothing is trusted
+# until it type-checks, emulates on Selene and beats a classical baseline.
+name: antioxidant-groundstate-screen
+goal: "Rank three candidate antioxidants by ground-state stability"
+retriever: { sources: [internal-rnd, journals, patents], top_k: 8 }
+pre_screen: { chemistry_model: mace-off, keep_top: 2 }
+quantum:
+  method: vqe
+  active_space: { electrons: 4, orbitals: 4 }
+  backend: selene            # validate on emulator first
+validation: { classical_baseline: ccsd, tolerance_hartree: 0.0016 }
+report: { audience: formulation-science, cite: true }

@@ -1,0 +1,15 @@
+[package]
+name = "diracq_compile"
+description = "DiracQ TKET compile service: Rust front over a pytket/tket2 Python worker; exposes palette actions and an Athena tool."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+diracq_services.workspace = true
+async-trait.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
