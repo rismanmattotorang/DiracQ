@@ -101,7 +101,16 @@ def run_experiment(
 class DefaultAgents:
     """Deterministic offline stand-ins. The production agents call the sidecar
     services (retriever/RAG, FM pre-screen, guppy code-gen, validate via
-    check+emulate+baseline, reporter); these mirror the shape without an LLM."""
+    check+emulate+baseline, reporter); these mirror the shape without an LLM.
+
+    If a `services` boundary is supplied (or the sidecar is importable), the
+    `validate` node runs the **real gate** (type-check → emulate → baseline) via
+    `athena.validation`; otherwise it falls back to an offline pass so the loop
+    is still demonstrable without the quantum stack.
+    """
+
+    def __init__(self, services=None) -> None:
+        self._services = services
 
     def plan(self, state: DiracQState) -> DiracQState:
         state["plan"] = ["retrieve", "pre_screen", "code_gen", "validate", "report"]
@@ -126,8 +135,19 @@ class DefaultAgents:
         return state
 
     def validate(self, state: DiracQState) -> DiracQState:
-        # Offline default always passes; real validate runs check+emulate+baseline.
-        state["validation"] = {"passed": True, "baseline": "ccsd", "within_tolerance": True}
+        # Real gate when a services boundary is available (injected or sidecar);
+        # otherwise an offline pass so the loop is demonstrable without the stack.
+        services = self._services
+        if services is None:
+            from athena.validation import sidecar_services
+
+            services = sidecar_services()
+        if services is not None:
+            from athena.validation import validate_program
+
+            state["validation"] = validate_program(state.get("guppy_src", ""), services)
+        else:
+            state["validation"] = {"passed": True, "stage": "report", "offline": True}
         return state
 
     def report(self, state: DiracQState) -> DiracQState:
