@@ -88,6 +88,20 @@ def test_real_emulation_is_reproducible_under_fixed_seed():
     assert ss.emulate(params)["counts"] == ss.emulate(params)["counts"]
 
 
+def test_diracnoise_introduces_error_outcomes():
+    """An ideal Bell run only yields 00/11; under the calibrated DiracNoise model
+    a small fraction of 01/10 (error) outcomes appears (§7.2)."""
+    base = {"guppy_src": _BELL, "entrypoint": "main", "n_qubits": 2,
+            "shots": 4000, "seed": 1, "simulator": "stim"}
+    ideal = ss.emulate(base)
+    assert set(ideal["counts"]) <= {"00", "11"}
+
+    noisy = ss.emulate({**base, "error_model": {"kind": "dirac_calibrated", "p_2q": 0.1}})
+    errors = noisy["counts"].get("01", 0) + noisy["counts"].get("10", 0)
+    assert errors > 0  # DiracNoise produced error outcomes
+    assert sum(noisy["counts"].values()) == 4000
+
+
 def test_real_compile_emits_hugr_bytes_and_metrics():
     from diracq_sidecar import compile_service as cs
 
