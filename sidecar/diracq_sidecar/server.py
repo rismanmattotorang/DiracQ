@@ -30,9 +30,14 @@ class Dispatcher:
     def register(self, method: str, handler: Handler) -> None:
         self._handlers[method] = handler
 
-    def handle(self, request: dict) -> dict | None:
+    def handle(self, request: dict, notify=None) -> dict | None:
         """Process one request object; returns a response, or None for a
-        notification (no ``id``)."""
+        notification (no ``id``).
+
+        ``notify`` is a callback ``(method, params) -> None`` the handler may use
+        to stream server-initiated notifications (no id) — e.g. ``selene.shot``,
+        ``compile.metric``, ``agent.progress`` (§12.2). It is passed only to
+        handlers that declare a ``notify`` parameter."""
         rpc_id = request.get("id")
         method = request.get("method")
         params = request.get("params") or {}
@@ -40,8 +45,12 @@ class Dispatcher:
             if rpc_id is None:
                 return None
             return _error(rpc_id, -32601, f"method not found: {method}")
+        handler = self._handlers[method]
         try:
-            result = self._handlers[method](params)
+            if notify is not None and _accepts_notify(handler):
+                result = handler(params, notify=notify)
+            else:
+                result = handler(params)
         except Exception as exc:  # surface as a structured error, never crash
             if rpc_id is None:
                 return None
@@ -53,6 +62,16 @@ class Dispatcher:
 
 def _error(rpc_id: Any, code: int, message: str) -> dict:
     return {"jsonrpc": "2.0", "id": rpc_id, "error": {"code": code, "message": message}}
+
+
+def _accepts_notify(handler) -> bool:
+    """True if `handler` declares a `notify` parameter (so it can stream)."""
+    import inspect
+
+    try:
+        return "notify" in inspect.signature(handler).parameters
+    except (ValueError, TypeError):
+        return False
 
 
 # --- length-prefixed framing (4-byte big-endian length + UTF-8 JSON) ---------
@@ -106,11 +125,15 @@ def main() -> int:
     stdin = sys.stdin.buffer
     stdout = sys.stdout.buffer
     print("[diracq-sidecar] ready (JSON-RPC 2.0 over length-prefixed stdio)", file=sys.stderr)
+    def notify(method: str, params: dict) -> None:
+        # Server-initiated notification (no id), streamed before the response.
+        write_message(stdout, {"jsonrpc": "2.0", "method": method, "params": params})
+
     while True:
         request = read_message(stdin)
         if request is None:
             break
-        response = dispatcher.handle(request)
+        response = dispatcher.handle(request, notify=notify)
         if response is not None:
             write_message(stdout, response)
     return 0

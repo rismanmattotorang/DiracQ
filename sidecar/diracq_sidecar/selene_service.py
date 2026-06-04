@@ -26,16 +26,19 @@ def register(dispatcher) -> None:
     dispatcher.register("selene.resources", resources)
 
 
-def emulate(params: dict) -> dict[str, Any]:
+def emulate(params: dict, notify=None) -> dict[str, Any]:
     """Run a program on Selene.
 
     params: guppy_src, entrypoint (default "main"), n_qubits, shots, seed,
     simulator ("stim"|"quest"), error_model {kind,p_1q,p_2q}. Falls back to the
     deterministic mock when selene-sim or guppy_src is unavailable.
+
+    `notify`, when provided, streams `selene.shot` progress notifications
+    (running tallies) so the emulation panel updates live (§12.2).
     """
     if params.get("guppy_src") and _selene_available():
-        return _emulate_real(params)
-    return _emulate_mock(params)
+        return _emulate_real(params, notify)
+    return _emulate_mock(params, notify)
 
 
 def resources(params: dict) -> dict[str, Any]:
@@ -43,7 +46,7 @@ def resources(params: dict) -> dict[str, Any]:
     return {"n_qubits": n, "gate_count": 0, "two_qubit_gates": 0, "depth": 0}
 
 
-def _emulate_real(params: dict) -> dict[str, Any]:
+def _emulate_real(params: dict, notify=None) -> dict[str, Any]:
     import guppylang
     import selene_sim
 
@@ -73,6 +76,8 @@ def _emulate_real(params: dict) -> dict[str, Any]:
             )
         result = builder.run()
         counts = _collate_bitstrings(result)
+        if notify is not None:
+            notify("selene.shot", {"done": int(sum(counts.values())), "total": shots, "counts": counts})
         return {
             "counts": counts,
             "metrics": {"n_qubits": n_qubits, "gate_count": 0, "two_qubit_gates": 0, "depth": 0},
@@ -98,15 +103,19 @@ def _collate_bitstrings(result) -> dict[str, int]:
     return out
 
 
-def _emulate_mock(params: dict) -> dict[str, Any]:
+def _emulate_mock(params: dict, notify=None) -> dict[str, Any]:
     n = max(1, min(int(params.get("n_qubits", 1)), 20))
     shots = int(params.get("shots", 0))
     seed = int(params.get("seed", 0))
     rng = random.Random(seed ^ (n << 32) ^ shots)
     counts: dict[str, int] = {}
-    for _ in range(shots):
+    # Stream progress in ~10 batches so the panel histogram fills live.
+    batch = max(1, shots // 10)
+    for i in range(shots):
         bits = "".join("1" if rng.getrandbits(1) else "0" for _ in range(n))
         counts[bits] = counts.get(bits, 0) + 1
+        if notify is not None and (i + 1) % batch == 0:
+            notify("selene.shot", {"done": i + 1, "total": shots, "counts": dict(counts)})
     return {
         "counts": counts,
         "metrics": {"n_qubits": n, "gate_count": 0, "two_qubit_gates": 0, "depth": 0},
