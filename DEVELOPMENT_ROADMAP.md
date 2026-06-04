@@ -162,8 +162,14 @@ Each maps to a crate/service with a typed interface and an acceptance test.
   only and is reproducible under a fixed seed; provenance carries the real
   guppylang/selene versions. Falls back to the deterministic mock when the stack
   is absent. Verified against selene-sim 0.2.16.
-- **TODO:** the `Render` impl + histogram element (behind `--features gpui`),
-  `selene.shot` streaming notifications, the DiracNoise calibrated plugin.
+- **`selene.shot` streaming (verified):** the JSON-RPC dispatcher now supports
+  server-initiated notifications (a `notify` callback passed to streaming
+  handlers; §12.2); `selene.emulate` streams `selene.shot` progress (running
+  tallies) so the panel histogram fills live — verified on the mock path and
+  emitted on the real path.
+- **TODO:** the GPUI histogram element is built (`diracq_gpui`); wire it to
+  consume live `selene.shot` events via the event bus in the editor binary; the
+  DiracNoise calibrated plugin.
 
 ### Workstream D — HUGR & circuit GPU canvases (fork crates) — *in progress (M3)*
 - **Seam:** Fork crates `crates/diracq_hugr` + `crates/diracq_circuit`, each a
