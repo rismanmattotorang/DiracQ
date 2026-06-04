@@ -135,6 +135,71 @@ pub fn layout_dag(
     }
 }
 
+/// Build graph inputs from the sidecar's `hugr.graph` payload
+/// (`{nodes:[{id,label}], edges:[{from,to}], regions:[[parent,[child,...]]]}`).
+/// This is how [`HugrGraphView`] renders a real compiled program (feed the
+/// result to [`layout_dag`]).
+#[allow(clippy::type_complexity)]
+pub fn graph_from_payload(
+    v: &serde_json::Value,
+) -> (Vec<GraphNode>, Vec<GraphEdge>, Vec<(u64, Vec<u64>)>) {
+    let nodes = v
+        .get("nodes")
+        .and_then(|n| n.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|n| {
+                    let id = n.get("id")?.as_u64()?;
+                    let label = n
+                        .get("label")
+                        .and_then(|l| l.as_str())
+                        .unwrap_or("?")
+                        .to_string();
+                    Some(GraphNode {
+                        id,
+                        label,
+                        span: None,
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let edges = v
+        .get("edges")
+        .and_then(|e| e.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|e| {
+                    Some(GraphEdge {
+                        from: e.get("from")?.as_u64()?,
+                        to: e.get("to")?.as_u64()?,
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let regions = v
+        .get("regions")
+        .and_then(|r| r.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|pair| {
+                    let p = pair.as_array()?;
+                    let parent = p.first()?.as_u64()?;
+                    let kids = p
+                        .get(1)?
+                        .as_array()?
+                        .iter()
+                        .filter_map(|k| k.as_u64())
+                        .collect();
+                    Some((parent, kids))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    (nodes, edges, regions)
+}
+
 #[cfg(feature = "gpui")]
 mod element {
     // TODO(Workstream D): custom `gpui::Element` with hit-testing for selection,
@@ -191,6 +256,28 @@ mod tests {
         let rows: Vec<u32> = g.model.nodes.iter().map(|n| n.row).collect();
         assert_eq!(rows, vec![0, 1]);
         assert!(g.model.nodes.iter().all(|n| n.col == 0));
+    }
+
+    #[test]
+    fn builds_graph_from_payload_and_lays_it_out() {
+        let v = serde_json::json!({
+            "nodes": [{"id": 1, "label": "Input"}, {"id": 2, "label": "ExtOp"}, {"id": 3, "label": "Output"}],
+            "edges": [{"from": 1, "to": 2}, {"from": 2, "to": 3}],
+            "regions": [[0, [1, 2, 3]]]
+        });
+        let (nodes, edges, regions) = graph_from_payload(&v);
+        assert_eq!(nodes.len(), 3);
+        assert_eq!(edges.len(), 2);
+        assert_eq!(regions, vec![(0u64, vec![1u64, 2, 3])]);
+        let g = layout_dag(&nodes, &edges, &regions);
+        let col = |id: u64| g.model.nodes.iter().find(|n| n.id == id).unwrap().col;
+        assert_eq!(col(1), 0);
+        assert_eq!(col(2), 1);
+        assert_eq!(col(3), 2);
+        assert_eq!(
+            g.model.nodes.iter().find(|n| n.id == 2).unwrap().label,
+            "ExtOp"
+        );
     }
 
     #[test]

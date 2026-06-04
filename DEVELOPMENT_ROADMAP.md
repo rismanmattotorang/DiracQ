@@ -190,9 +190,14 @@ Each maps to a crate/service with a typed interface and an acceptance test.
   (`{n_qubits, gates, measures}`); `diracq_circuit::ops_from_extracted` turns that
   into `GateOp`s that `layout_ops` lays out for `CircuitCanvasView`. A source-parse
   mock serves the canvas without the stack. Verified against selene-sim 0.2.16.
+- **Real HUGR graph decode (verified):** the sidecar `hugr.graph` walks the
+  compiled HUGR Package (nodes/ops, links, parent→child regions) and returns
+  `{nodes, edges, regions}`; `diracq_hugr::graph_from_payload` + `layout_dag`
+  feed `HugrGraphView`. A source-derived mock serves the canvas without the stack.
+  Verified against hugr 0.16.0.
 - **TODO:** dock these views in the Zed `Workspace` (editor-binary integration);
-  pan/zoom + hit-testing → editor-selection via a custom `Element`; real HUGR
-  *graph* (node/edge) decode for `HugrGraphView`; `selene.shot` live streaming.
+  pan/zoom + hit-testing → editor-selection via a custom `Element`; `selene.shot`
+  live streaming.
 
 ### Workstream E — Athena as an ACP agent server — *in progress (P3)*
 - **Seam:** ACP agent server process `agents/athena` implementing the surface

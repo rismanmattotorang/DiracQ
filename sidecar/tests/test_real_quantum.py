@@ -132,3 +132,15 @@ def test_real_circuit_extract_yields_gates_and_measures():
     assert len(out["measures"]) == 2
     # The lowered Helios circuit entangles the two qubits (a 2-qubit gate).
     assert any(len(g["qubits"]) == 2 for g in out["gates"])
+
+
+def test_real_hugr_graph_has_nodes_and_edges():
+    from diracq_sidecar import hugr_service as hz
+
+    g = hz.graph({"guppy_src": _BELL, "entrypoint": "main"})
+    assert len(g["nodes"]) > 3  # Module/FuncDefn/Input/Output + ops
+    assert len(g["edges"]) > 0
+    labels = {n["label"] for n in g["nodes"]}
+    assert "Output" in labels  # a real HUGR structural node
+    ids = {n["id"] for n in g["nodes"]}
+    assert all(e["from"] in ids and e["to"] in ids for e in g["edges"])
