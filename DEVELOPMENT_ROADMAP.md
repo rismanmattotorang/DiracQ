@@ -134,9 +134,13 @@ Each maps to a crate/service with a typed interface and an acceptance test.
   use-after-measure / double-measure inline. Verified end-to-end against the
   compiled `diracq-guppy-lsp` binary and by unit tests. This already satisfies
   the "deliberate linear-type violation surfaces a diagnostic" half of M1.
-- **TODO:** swap the heuristic for the authoritative `guppylang` worker over the
-  JSON-RPC bridge (ground-truth diagnostics, `compile_summary`, `resources`);
-  idle-debounce checks on the background executor; hover/completion bodies.
+- **Real stack wired (verified):** the worker now runs **real `guppylang`** when
+  installed — `_real_check` compiles each user `@guppy` function (found via the
+  buffer AST) and maps guppylang errors to **precise byte-range diagnostics**
+  (e.g. `AlreadyUsedError`/"Copy violation" → the offending `q`); `compile_summary`
+  returns real HUGR node/qubit counts. Falls back to the heuristic when the stack
+  is absent. Verified against guppylang 0.21.15 (`sidecar/tests/test_real_quantum.py`).
+- **TODO:** idle-debounce on the background executor; hover/completion bodies.
 
 ### Workstream C — Selene emulation panel (fork crate) — *in progress (M2)*
 - **Seam:** Fork crate `crates/diracq_selene` (GPUI view + entity); emulation
@@ -152,8 +156,14 @@ Each maps to a crate/service with a typed interface and an acceptance test.
   selene-sim run when installed, else the same deterministic mock (provenance
   stamped `selene = "mock"`). The shared length-prefixed JSON framing now lives
   in `diracq_services::framing`. Reproducibility (G7) is unit-tested on both sides.
-- **TODO:** the `Render` impl + histogram element (behind `--features gpui`), the
-  real selene-sim driver with `selene.shot` streaming, the DiracNoise plugin.
+- **Real stack wired (verified):** `selene.emulate` now compiles a supplied
+  `guppy_src` and runs it on **real Selene** (Stim/Quest, optional depolarizing
+  noise) via the guppy emulator builder — a Bell kernel clusters on `00`/`11`
+  only and is reproducible under a fixed seed; provenance carries the real
+  guppylang/selene versions. Falls back to the deterministic mock when the stack
+  is absent. Verified against selene-sim 0.2.16.
+- **TODO:** the `Render` impl + histogram element (behind `--features gpui`),
+  `selene.shot` streaming notifications, the DiracNoise calibrated plugin.
 
 ### Workstream D — HUGR & circuit GPU canvases (fork crates) — *in progress (M3)*
 - **Seam:** Fork crates `crates/diracq_hugr` + `crates/diracq_circuit`, each a
@@ -233,8 +243,13 @@ Each maps to a crate/service with a typed interface and an acceptance test.
   reduction, plus the Mermaid string for the circuit view. The sidecar
   `tket.compile` runs real pytket/tket2 when installed, else the same mock.
   Tested on both sides (the diff shows fewer two-qubit gates with passes on).
-- **TODO:** the real `guppy.compile → tket2 passes → dirac.chem → qsystem` body;
-  pass-by-pass metrics; a CI check pinning tket2/qsystem against upstream renames.
+- **Real compile wired (verified):** when given genuine `@guppy` source with the
+  stack installed, `tket.compile` emits the **actual serialised HUGR bytes**
+  (base64) plus real node/qubit metrics; the mock (with its before/after win)
+  still serves dev/CI without the stack. Verified against guppylang 0.21.15.
+- **TODO:** run tket2 optimisation + `dirac.chem` + qsystem passes (real
+  before/after entangling-gate reduction); emit `circ.mermaid_string()`; a CI
+  check pinning tket2/qsystem against upstream renames.
 
 > With Workstreams A, B, C and H landed (mock-backed where the heavy stack isn't
 > installed), the **M2 "author → compile → emulate" loop is exercisable

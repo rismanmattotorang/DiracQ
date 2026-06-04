@@ -15,10 +15,11 @@ before any procurement or release decision.
 | WASM target | wasm32-wasip2 | Extension compile target. |
 | ACP | ProtocolVersion::V1 | Min. version for the Athena agent. |
 | Python | 3.11–3.12 | Sidecar interpreter. |
-| guppylang | ≥ 0.21 | Bundles Selene; LSP ground truth. |
-| selene-sim | matched | To guppylang; QuEST/Stim backends. |
-| tket2 / hugr | pinned **pair** | Renames are managed upgrades — upgrade together (ADR-05). |
-| pytket | current | Bridge for legacy circuits. |
+| guppylang | 0.21.15 | LSP ground truth; resolved + verified in CI venv. |
+| guppylang-internals | 0.36.0 | Error/span APIs used for diagnostic ranges. |
+| selene-sim | 0.2.16 | Stim/Quest backends; depolarizing error model. |
+| hugr | 0.16.0 | IR; `Package.to_bytes` for the `hugr_b64` contract. |
+| tket / pytket | 0.13.1 / 2.18.0 | TKET compiler + Python bindings. |
 | LangGraph | pinned | Orchestration graph. |
 | transformers | pinned | HF inference runtime. |
 | RDKit | pinned | Molecular parsing. |

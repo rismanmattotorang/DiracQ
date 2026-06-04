@@ -55,6 +55,25 @@ jobs:
           pip install pydantic pytest
           PYTHONPATH=. pytest -q
 
+  quantum:
+    name: Real quantum stack (guppylang + selene-sim)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install stack + run real integration tests
+        working-directory: sidecar
+        # The real guppylang/selene-sim integration: precise diagnostics, real
+        # Bell emulation (00/11, seed-reproducible), real HUGR compile. These
+        # tests skip automatically if the install fails, so this job is
+        # informative rather than a hard gate on PyPI availability.
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest guppylang || echo "::warning::quantum stack install failed"
+          PYTHONPATH=. pytest tests/test_real_quantum.py -q
+
   athena:
     name: Athena agent (orchestrator + ACP lifecycle)
     runs-on: ubuntu-latest

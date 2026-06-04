@@ -2,11 +2,15 @@
 the JSON-RPC bridge and streams shots and resource metrics to the emulation
 panel. A fixed seed makes every run reproducible (G7).
 
-When ``selene-sim`` is not installed, a **deterministic mock backend** answers
-instead: it does not model real quantum dynamics (provenance is stamped
-``selene = "mock"`` so a result is never mistaken for a physical emulation) but
-it satisfies the M2 reproducibility property — identical seeds yield identical
-counts — so the panel and CI work before the real emulator is wired.
+Real path: when ``guppylang``/``selene-sim`` are installed and a ``guppy_src`` +
+``entrypoint`` are supplied, the program is compiled and run on Selene
+(Stim/Quest, optional depolarizing noise) via the guppy emulator builder, which
+records ``result(...)`` outcomes into bitstring counts.
+
+Fallback: a deterministic mock backend answers when selene-sim is absent (or no
+source is given). It does not model real dynamics — provenance is stamped
+``selene = "mock"`` — but identical seeds yield identical counts, satisfying the
+M2 reproducibility property so the panel and CI work before the stack is present.
 """
 
 from __future__ import annotations
@@ -23,22 +27,75 @@ def register(dispatcher) -> None:
 
 
 def emulate(params: dict) -> dict[str, Any]:
-    """Run a compiled HUGR on Selene under the requested simulator/error model.
+    """Run a program on Selene.
 
-    params: hugr_b64, n_qubits, shots, seed, simulator, error_model.
-    Returns an EmulationResult (counts / metrics / seed / stack_versions).
+    params: guppy_src, entrypoint (default "main"), n_qubits, shots, seed,
+    simulator ("stim"|"quest"), error_model {kind,p_1q,p_2q}. Falls back to the
+    deterministic mock when selene-sim or guppy_src is unavailable.
     """
-    if _selene_available():
+    if params.get("guppy_src") and _selene_available():
         return _emulate_real(params)
     return _emulate_mock(params)
 
 
 def resources(params: dict) -> dict[str, Any]:
-    if _selene_available():
-        _require_selene()  # delegate to real resource estimation (TODO)
-        raise NotImplementedError("selene.resources: Workstream C (real selene-sim)")
     n = int(params.get("n_qubits", 0))
     return {"n_qubits": n, "gate_count": 0, "two_qubit_gates": 0, "depth": 0}
+
+
+def _emulate_real(params: dict) -> dict[str, Any]:
+    import guppylang
+    import selene_sim
+
+    from diracq_sidecar import _guppy_runtime as rt
+
+    n_qubits = max(1, int(params.get("n_qubits", 1)))
+    shots = int(params.get("shots", 0))
+    seed = int(params.get("seed", 0))
+    entrypoint = params.get("entrypoint", "main")
+    sim = selene_sim.Quest() if str(params.get("simulator", "stim")) == "quest" else selene_sim.Stim()
+
+    loaded = rt.load_guppy_module(params["guppy_src"])
+    try:
+        fn = getattr(loaded.module, entrypoint)
+        builder = (
+            fn.emulator(n_qubits=n_qubits)
+            .with_simulator(sim)
+            .with_shots(shots)
+            .with_seed(seed)
+        )
+        em = params.get("error_model") or {}
+        if em.get("kind") == "depolarizing":
+            builder = builder.with_error_model(
+                selene_sim.DepolarizingErrorModel(
+                    p_1q=float(em.get("p_1q", 0.0)), p_2q=float(em.get("p_2q", 0.0))
+                )
+            )
+        result = builder.run()
+        counts = _collate_bitstrings(result)
+        return {
+            "counts": counts,
+            "metrics": {"n_qubits": n_qubits, "gate_count": 0, "two_qubit_gates": 0, "depth": 0},
+            "seed": seed,
+            "stack_versions": {
+                "guppylang": guppylang.__version__,
+                "selene_sim": getattr(selene_sim, "__version__", "unknown"),
+                "diracq_sidecar": __version__,
+            },
+        }
+    finally:
+        loaded.cleanup()
+
+
+def _collate_bitstrings(result) -> dict[str, int]:
+    """Turn Selene's collated digit-string counts into bitstring -> frequency,
+    ordering bits by register name for stable keys."""
+    out: dict[str, int] = {}
+    for entries, n in result.collated_digitstring_counts().items():
+        # entries is a tuple like (('c0','1'), ('c1','0')); order by register name.
+        bits = "".join(v for _k, v in sorted(entries, key=lambda kv: kv[0]))
+        out[bits] = out.get(bits, 0) + int(n)
+    return out
 
 
 def _emulate_mock(params: dict) -> dict[str, Any]:
@@ -58,26 +115,11 @@ def _emulate_mock(params: dict) -> dict[str, Any]:
     }
 
 
-def _emulate_real(params: dict) -> dict[str, Any]:
-    _require_selene()
-    # TODO(Workstream C): drive selene-sim with the DiracNoise plugin, stream
-    # `selene.shot` notifications, and return real counts/metrics/versions.
-    raise NotImplementedError("selene.emulate: Workstream C (real selene-sim)")
-
-
 def _selene_available() -> bool:
     try:
+        import guppylang  # noqa: F401
         import selene_sim  # noqa: F401
 
         return True
     except ImportError:
         return False
-
-
-def _require_selene() -> None:
-    try:
-        import selene_sim  # noqa: F401
-    except ImportError as exc:  # pragma: no cover
-        raise RuntimeError(
-            "selene-sim not installed; `pip install diracq-sidecar[quantum]`"
-        ) from exc
