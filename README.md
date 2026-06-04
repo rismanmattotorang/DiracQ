@@ -132,6 +132,21 @@ and extended. See **[`ARCHITECTURE.md`](ARCHITECTURE.md)** for the repository ma
 | `agents/athena` | L5 | Athena agent server (LangGraph orchestration) |
 | `src-tauri/` | L2/L3 | Tauri shell + least-privilege capabilities |
 
+## 🆚 A strict superset of Zed
+
+DiracQ inherits **every** feature of [Zed](https://github.com/zed-industries/zed)
+1.7.0 (all 235 crates — Vim, Git, the debugger, the terminal, real-time
+collaboration, the extension ecosystem, themes, edit-prediction, the AI agent
+panel) **unchanged**, because it is an *additive-delta fork*: the DiracQ binary is
+the Zed workspace built with the additive `diracq_*` crates — **0 Zed sources are
+modified**. On top, DiracQ adds the entire quantum toolchain Zed has no equivalent
+for. See the verified matrix in **[`docs/FEATURE_PARITY.md`](docs/FEATURE_PARITY.md)**
+(reproduce with `./scripts/zed-feature-audit.sh`).
+
+```
+DiracQ  =  Zed (all features, unchanged)  ⊕  quantum language · emulation · compile · canvases · agent
+```
+
 ## 🚀 Quick start
 
 > DiracQ is engineered so the **entire additive layer builds and tests without a
