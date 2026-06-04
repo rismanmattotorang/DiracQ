@@ -83,6 +83,7 @@ def build_dispatcher() -> Dispatcher:
         ("diracq_sidecar.selene_service", "register"),
         ("diracq_sidecar.compile_service", "register"),
         ("diracq_sidecar.circuit_service", "register"),
+        ("diracq_sidecar.hugr_service", "register"),
         ("diracq_sidecar.inference", "register"),
         ("diracq_sidecar.molecular", "register"),
     ):
