@@ -127,6 +127,48 @@ pub fn layout_ops(ops: &[GateOp], n_wires: u32) -> CircuitLayout {
     }
 }
 
+/// Build a circuit from the sidecar's `circuit.extract` payload
+/// (`{n_qubits, gates:[{name, qubits:[..]}], measures:[{qubit, classical_bit}]}`),
+/// returning the gate ops and the wire count. This is how the canvas turns a
+/// real compiled program into a [`CircuitLayout`] (via [`layout_ops`]).
+pub fn ops_from_extracted(v: &serde_json::Value) -> (Vec<GateOp>, u32) {
+    let n_wires = v.get("n_qubits").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+    let mut ops = Vec::new();
+    if let Some(gates) = v.get("gates").and_then(|g| g.as_array()) {
+        for g in gates {
+            let name = g.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+            let qubits: Vec<u32> = g
+                .get("qubits")
+                .and_then(|q| q.as_array())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|x| x.as_u64().map(|n| n as u32))
+                        .collect()
+                })
+                .unwrap_or_default();
+            ops.push(GateOp::new(name, qubits));
+        }
+    }
+    if let Some(measures) = v.get("measures").and_then(|m| m.as_array()) {
+        for m in measures {
+            let q = m.get("qubit").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+            let bit = m
+                .get("classical_bit")
+                .and_then(|x| x.as_u64())
+                .unwrap_or(q as u64) as u32;
+            ops.push(GateOp::measure(q, bit));
+        }
+    }
+    let wires = n_wires.max(
+        ops.iter()
+            .flat_map(|o| o.qubits.iter().copied())
+            .max()
+            .map(|m| m + 1)
+            .unwrap_or(0),
+    );
+    (ops, wires)
+}
+
 #[cfg(feature = "gpui")]
 mod element {
     // TODO(Workstream D): custom `gpui::Element`; pan/zoom; gate hit-testing →
@@ -176,6 +218,36 @@ mod tests {
         let ops = [GateOp::new("h", [0]).with_span((10, 14))];
         let layout = layout_ops(&ops, 1);
         assert_eq!(layout.gates[0].span, Some((10, 14)));
+    }
+
+    #[test]
+    fn builds_ops_from_extracted_payload() {
+        let v = serde_json::json!({
+            "n_qubits": 2,
+            "gates": [
+                {"name": "h", "qubits": [0]},
+                {"name": "cx", "qubits": [0, 1]}
+            ],
+            "measures": [
+                {"qubit": 0, "classical_bit": 0},
+                {"qubit": 1, "classical_bit": 1}
+            ]
+        });
+        let (ops, wires) = ops_from_extracted(&v);
+        assert_eq!(wires, 2);
+        assert_eq!(ops.len(), 4); // h, cx, 2 measures
+                                  // Lay it out: h@0, cx@1, measures@2 → depth 3, 2 measures.
+        let layout = layout_ops(&ops, wires);
+        assert_eq!(layout.width_cols, 3);
+        assert_eq!(layout.measures.len(), 2);
+        assert_eq!(layout.gates.iter().find(|g| g.name == "cx").unwrap().col, 1);
+    }
+
+    #[test]
+    fn extracted_wire_count_grows_to_fit_qubit_indices() {
+        let v = serde_json::json!({"n_qubits": 0, "gates": [{"name":"cx","qubits":[0,3]}], "measures": []});
+        let (_ops, wires) = ops_from_extracted(&v);
+        assert_eq!(wires, 4); // max index 3 → 4 wires
     }
 
     #[test]

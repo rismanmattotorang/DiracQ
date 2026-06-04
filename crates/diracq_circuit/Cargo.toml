@@ -13,3 +13,4 @@ gpui = []
 
 [dependencies]
 diracq_viz.workspace = true
+serde_json.workspace = true

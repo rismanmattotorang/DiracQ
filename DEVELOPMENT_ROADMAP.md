@@ -185,9 +185,14 @@ Each maps to a crate/service with a typed interface and an acceptance test.
   Rust 1.95.0) via `scripts/build-gpui.sh`, which stages the crate into the
   vendored Zed workspace (gpui needs Zed's workspace inheritance). The crate is
   excluded from the main workspace so `cargo check --workspace` still needs no GPU.
-- **TODO:** decode a real HUGR into `GateOp`s / nodes+edges; dock these views in
-  the Zed `Workspace` (the editor-binary integration); pan/zoom + hit-testing →
-  editor-selection via a custom `Element`; `selene.shot` live streaming.
+- **Real circuit decode (verified):** the sidecar `circuit.extract` runs one shot
+  with Selene's `CircuitExtractor` and returns the lowered Helios-native circuit
+  (`{n_qubits, gates, measures}`); `diracq_circuit::ops_from_extracted` turns that
+  into `GateOp`s that `layout_ops` lays out for `CircuitCanvasView`. A source-parse
+  mock serves the canvas without the stack. Verified against selene-sim 0.2.16.
+- **TODO:** dock these views in the Zed `Workspace` (editor-binary integration);
+  pan/zoom + hit-testing → editor-selection via a custom `Element`; real HUGR
+  *graph* (node/edge) decode for `HugrGraphView`; `selene.shot` live streaming.
 
 ### Workstream E — Athena as an ACP agent server — *in progress (P3)*
 - **Seam:** ACP agent server process `agents/athena` implementing the surface
@@ -252,13 +257,16 @@ Each maps to a crate/service with a typed interface and an acceptance test.
   reduction, plus the Mermaid string for the circuit view. The sidecar
   `tket.compile` runs real pytket/tket2 when installed, else the same mock.
   Tested on both sides (the diff shows fewer two-qubit gates with passes on).
-- **Real compile wired (verified):** when given genuine `@guppy` source with the
-  stack installed, `tket.compile` emits the **actual serialised HUGR bytes**
-  (base64) plus real node/qubit metrics; the mock (with its before/after win)
-  still serves dev/CI without the stack. Verified against guppylang 0.21.15.
-- **TODO:** run tket2 optimisation + `dirac.chem` + qsystem passes (real
-  before/after entangling-gate reduction); emit `circ.mermaid_string()`; a CI
-  check pinning tket2/qsystem against upstream renames.
+- **Real compile + optimisation (verified):** with the stack installed,
+  `tket.compile` emits the **actual serialised HUGR bytes** (base64), extracts the
+  lowered circuit for **real before/after metrics**, and applies a real tket pass
+  (`FullPeepholeOptimise`) — on a redundant-CX kernel the diff is genuine:
+  **16→5 gates, 2→0 two-qubit gates, depth 11→3**. A Mermaid string is generated
+  from the optimised circuit for the viewer. The mock still serves dev/CI.
+  Verified against pytket 2.18.0 / guppylang 0.21.15.
+- **TODO:** slot the namespaced `dirac.chem` passes (UCC fusion / Pauli grouping)
+  ahead of the qsystem pass via `tket.passes.QSystemPass`; a CI check pinning
+  tket2/qsystem against upstream renames.
 
 > With Workstreams A, B, C and H landed (mock-backed where the heavy stack isn't
 > installed), the **M2 "author → compile → emulate" loop is exercisable

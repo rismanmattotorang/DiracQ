@@ -59,31 +59,71 @@ def _compile_mock(params: dict) -> dict[str, Any]:
 
 
 def _compile_real(params: dict) -> dict[str, Any]:
-    """Real Guppy->HUGR compile: emits the actual HUGR bytes (base64) and node/
-    qubit metrics from the compiled program. The tket2 optimisation passes
-    (the before/after entangling-gate reduction) and the Mermaid emission remain
-    the Workstream-H TODO, so before == after here."""
+    """Real Guppy->HUGR compile. Emits the actual HUGR bytes (base64), the
+    lowered circuit's real resource metrics, and the metrics after a tket
+    optimisation pass — so the before/after entangling-gate reduction in the
+    circuit-diff view is real (Workstream H acceptance criterion)."""
+    from pytket.passes import FullPeepholeOptimise
+
     from diracq_sidecar import _guppy_runtime as rt
 
     src = params["guppy_src"]
+    entry = params.get("entrypoint", "main")
+    n_qubits = int(params.get("n_qubits", src.count("qubit(") or 2))
+
     loaded = rt.load_guppy_module(src)
     try:
-        entry = rt.select_entrypoint(loaded.module, src)
-        if entry is None:
+        defn = rt.select_entrypoint(loaded.module, src)
+        if defn is None:
             return _compile_mock(params)
-        pkg = entry.compile()
-        hugr_b64 = base64.b64encode(pkg.to_bytes()).decode()
-        nodes = sum(1 for _ in pkg.modules[0])
-        qubits = src.count("qubit(")
-        metrics = {"n_qubits": qubits, "gate_count": nodes, "two_qubit_gates": 0, "depth": 0}
-        return {
-            "hugr_b64": hugr_b64,
-            "mermaid": "",  # TODO(Workstream H): tket2 circ.mermaid_string()
-            "metrics_before": metrics,
-            "metrics_after": metrics,
-        }
+        hugr_b64 = base64.b64encode(defn.compile().to_bytes()).decode()
     finally:
         loaded.cleanup()
+
+    # Real before/after metrics from the lowered, Helios-native circuit.
+    circ = rt.extract_user_circuit(src, entry, n_qubits)
+    before = _metrics(circ)
+    optimised = circ.copy()
+    if params.get("dirac_passes", True):
+        FullPeepholeOptimise().apply(optimised)
+    after = _metrics(optimised)
+    return {
+        "hugr_b64": hugr_b64,
+        "mermaid": _mermaid(optimised),
+        "metrics_before": before,
+        "metrics_after": after,
+    }
+
+
+def _metrics(circ) -> dict[str, int]:
+    return {
+        "n_qubits": circ.n_qubits,
+        "gate_count": circ.n_gates,
+        "two_qubit_gates": circ.n_2qb_gates(),
+        "depth": circ.depth(),
+    }
+
+
+def _mermaid(circ) -> str:
+    """A simple left-to-right Mermaid flow of the circuit (one chain per qubit).
+    tket2's native `mermaid_string()` is HUGR-level; this is a faithful, stable
+    rendering from the lowered pytket circuit for the viewer."""
+    lines = ["graph LR"]
+    last: dict[int, str] = {}
+    counter = 0
+    for cmd in circ.get_commands():
+        name = str(cmd.op.type).rsplit(".", 1)[-1]
+        for q in cmd.qubits:
+            qi = q.index[0]
+            node = f"n{counter}"
+            counter += 1
+            label = f'{node}["{name} q{qi}"]'
+            if qi in last:
+                lines.append(f"  {last[qi]} --> {label}")
+            else:
+                lines.append(f"  {label}")
+            last[qi] = node
+    return "\n".join(lines)
 
 
 def _guppy_available() -> bool:
