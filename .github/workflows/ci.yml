@@ -12,12 +12,18 @@ on:
 
 jobs:
   rust:
-    name: Rust workspace (standalone, no GPUI)
+    name: Rust workspace (${{ matrix.toolchain }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # stable for breadth; 1.95.0 is the pinned toolchain Zed/DiracQ build on.
+        toolchain: [stable, "1.95.0"]
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: ${{ matrix.toolchain }}
           components: clippy, rustfmt
       - name: fmt
         run: cargo fmt --all --check
@@ -25,6 +31,8 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: check
         run: cargo check --workspace
+      - name: test
+        run: cargo test --workspace
 
   extension:
     name: Guppy WASM extension
@@ -73,6 +81,20 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest guppylang || echo "::warning::quantum stack install failed"
           PYTHONPATH=. pytest tests/test_real_quantum.py -q
+
+  bench:
+    name: Benchmark harness (budgets gate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: run reference suite (mock path) + enforce budgets
+        working-directory: sidecar
+        # Deterministic, mock-backed reference workloads (§14). Exits non-zero on
+        # any p95 budget regression — the reproducibility/perf CI gate.
+        run: PYTHONPATH=. python -m diracq_sidecar.benchmarks
 
   athena:
     name: Athena agent (orchestrator + ACP lifecycle)

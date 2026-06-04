@@ -91,3 +91,53 @@ sidecar — strongest isolation but heavy for a desktop app and awkward for GPU 
 **Consequences.** Process-level isolation plus a capability gate is a strong,
 practical boundary; accept IPC cost and a coarser-than-VM sandbox, hardened by the
 egress allowlist and keychain-only secrets.
+
+---
+
+> ADRs below were adopted during implementation (they record decisions made while
+> wiring the real stack, the GPUI surfaces and the CI gates).
+
+## ADR-09 — Deterministic mock backends with provenance + graceful fallback
+**Decision.** Every service that fronts a heavy dependency (guppylang, selene-sim,
+tket2, transformers, RDKit) ships a **deterministic mock backend** and selects the
+real driver only when the dependency is importable; otherwise it falls back to the
+mock. Mock outputs are **provenance-stamped** (e.g. `stack_versions.selene = "mock"`)
+so a mock result is never mistaken for a real one, and they are **seeded** so the
+same inputs reproduce the same outputs.
+**Context.** The full Quantinuum/ML stack is large and not always present (fresh
+checkouts, fast CI, contributor laptops). We still want every layer buildable,
+testable and demoable end-to-end.
+**Alternatives.** (a) Require the full stack everywhere — slow, brittle CI, high
+barrier to entry. (b) Skip tests when deps are missing — leaves the integration
+logic unexercised.
+**Consequences.** Default CI is fast and hermetic; real integrations are verified
+in an opt-in job (`test_real_quantum.py`, `quantum` CI job). The cost is keeping
+mock and real shapes in sync, enforced by shared payload contracts. **Accepted.**
+
+## ADR-10 — GPUI surfaces as an excluded crate staged into the vendored Zed workspace
+**Decision.** Keep the real `gpui::Render` views in `crates/diracq_gpui`, *excluded*
+from the DiracQ workspace, and build them by staging the crate into the vendored
+Zed workspace (`scripts/build-gpui.sh`).
+**Context.** `gpui` uses Zed's workspace-inherited dependencies, so it only
+resolves inside Zed's workspace; Cargo also requires workspace members to live
+under the workspace root, so an out-of-tree member is rejected. Meanwhile the
+standalone `cargo check --workspace` must keep working with no Zed and no GPU.
+**Alternatives.** (a) Make `diracq_gpui` its own workspace with a path dep on gpui
+— fails: gpui's inherited deps can't resolve. (b) Add `diracq_gpui` to the main
+workspace with an optional gpui path dep — forces `third_party/zed` to exist for
+any `cargo check`. (c) Fork gpui to drop inheritance — violates G4.
+**Consequences.** The default build needs nothing extra; the GPU build is a
+documented, reproducible opt-in (verified: `gpui` and `diracq_gpui` both check
+against the vendored Zed at Rust 1.95.0). The cost is a small staging step. **Accepted.**
+
+## ADR-11 — Benchmark harness as a CI gate; reproducibility is a measured property
+**Decision.** Ship a fixed, seeded benchmark suite (`diracq_sidecar.bench` +
+`benchmarks.py`) that records latency percentiles and **fails CI when a case's p95
+exceeds its budget** (`benchmarks/budgets.json`, Table 8).
+**Context.** Performance is goal G6 and reproducibility is G7; both are only real
+if measured continuously. Seeded workloads make results comparable across commits.
+**Alternatives.** (a) Ad-hoc manual timing — not enforceable. (b) Wall-clock
+assertions inside unit tests — noisy and host-dependent without percentiles.
+**Consequences.** Regressions are caught automatically; budgets are padded for CI
+hardware and cold real-stack runs and tightened over time. Runs mock-backed in CI
+(fast/hermetic) and against the real stack on demand. **Accepted.**

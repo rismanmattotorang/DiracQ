@@ -1,0 +1,5 @@
+{
+  "bell_smoke":        { "p95_ms": 8000, "note": "Bell smoke test (compile+emulate); generous for cold real-stack runs" },
+  "emulate_4q_2k":     { "p95_ms": 4000, "note": "Selene 4q/2k shots; Table 8 target <2s on Stim, padded for CI hardware" },
+  "hugr_compile_small":{ "p95_ms": 6000, "note": "small HUGR compile; Table 8 target <1.5s, padded for cold real-stack" }
+}
