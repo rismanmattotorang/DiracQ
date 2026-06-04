@@ -76,7 +76,13 @@ def _compile_real(params: dict) -> dict[str, Any]:
         defn = rt.select_entrypoint(loaded.module, src)
         if defn is None:
             return _compile_mock(params)
-        hugr_b64 = base64.b64encode(defn.compile().to_bytes()).decode()
+        pkg = defn.compile()
+        # qsystem preparation always runs last (Fig. 3): lower the HUGR for the
+        # H-series target. Real tket2 pass; guarded so non-qsystem programs still
+        # compile.
+        if str(params.get("target", "helios")) == "helios":
+            _qsystem_prepare(pkg)
+        hugr_b64 = base64.b64encode(pkg.to_bytes()).decode()
     finally:
         loaded.cleanup()
 
@@ -93,6 +99,22 @@ def _compile_real(params: dict) -> dict[str, Any]:
         "metrics_before": before,
         "metrics_after": after,
     }
+
+
+def _qsystem_prepare(pkg) -> bool:
+    """Run tket2's QSystemPass on the compiled HUGR (Helios qsystem prep, always
+    last). Returns True if it ran. Best-effort: guarded so a program that isn't
+    qsystem-ready still yields a HUGR."""
+    try:
+        import tket.passes as tp
+
+        tp.QSystemPass().run(pkg.modules[0])
+        return True
+    except Exception as exc:  # pragma: no cover - depends on program shape
+        import sys
+
+        print(f"[compile] qsystem prep skipped: {exc}", file=sys.stderr)
+        return False
 
 
 def _metrics(circ) -> dict[str, int]:
