@@ -82,6 +82,7 @@ def build_dispatcher() -> Dispatcher:
     for module_name, register_name in (
         ("diracq_sidecar.selene_service", "register"),
         ("diracq_sidecar.compile_service", "register"),
+        ("diracq_sidecar.circuit_service", "register"),
         ("diracq_sidecar.inference", "register"),
         ("diracq_sidecar.molecular", "register"),
     ):

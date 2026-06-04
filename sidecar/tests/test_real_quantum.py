@@ -98,3 +98,37 @@ def test_real_compile_emits_hugr_bytes_and_metrics():
     assert len(raw) > 0  # a real serialised HUGR package
     assert r["metrics_before"]["n_qubits"] == 2
     assert r["metrics_before"]["gate_count"] > 0
+    assert r["mermaid"].startswith("graph LR")
+
+
+# A circuit with a redundant pair of CX (identity) so optimisation has something
+# real to remove.
+_REDUNDANT = (
+    "from guppylang import guppy\n"
+    "from guppylang.std.quantum import qubit, h, cx, measure\n"
+    "from guppylang.std.builtins import result\n"
+    "@guppy\n"
+    "def main() -> None:\n"
+    "    a = qubit()\n    b = qubit()\n    h(a)\n    cx(a, b)\n    cx(a, b)\n"
+    "    result('c0', measure(a))\n    result('c1', measure(b))\n"
+)
+
+
+def test_real_compile_optimisation_reduces_two_qubit_gates():
+    from diracq_sidecar import compile_service as cs
+
+    r = cs.compile_guppy({"guppy_src": _REDUNDANT, "dirac_passes": True})
+    before = r["metrics_before"]["two_qubit_gates"]
+    after = r["metrics_after"]["two_qubit_gates"]
+    assert before >= 2
+    assert after < before  # the redundant CX pair is removed by the real pass
+
+
+def test_real_circuit_extract_yields_gates_and_measures():
+    from diracq_sidecar import circuit_service as cz
+
+    out = cz.extract({"guppy_src": _BELL, "entrypoint": "main", "n_qubits": 2})
+    assert out["n_qubits"] == 2
+    assert len(out["measures"]) == 2
+    # The lowered Helios circuit entangles the two qubits (a 2-qubit gate).
+    assert any(len(g["qubits"]) == 2 for g in out["gates"])

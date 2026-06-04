@@ -102,6 +102,35 @@ def select_entrypoint(module: Any, src: str) -> Optional[Any]:
     return list(defs.values())[-1] if defs else None
 
 
+def extract_user_circuit(src: str, entrypoint: str, n_qubits: int):
+    """Run one shot on Selene with a CircuitExtractor and return the lowered
+    pytket ``Circuit`` the program produced (Helios-native gates). Requires the
+    quantum stack; raises if it is unavailable."""
+    import selene_sim
+
+    loaded = load_guppy_module(src)
+    try:
+        # NB: never use truthiness on a Guppy def (its __bool__ enters tracing).
+        fn = getattr(loaded.module, entrypoint, None)
+        if fn is None:
+            fn = select_entrypoint(loaded.module, src)
+        if fn is None:
+            raise RuntimeError("no Guppy entrypoint found")
+        extractor = selene_sim.CircuitExtractor()
+        result = (
+            fn.emulator(n_qubits=max(1, n_qubits))
+            .with_simulator(selene_sim.Stim())
+            .with_shots(1)
+            .with_seed(0)
+            .with_event_hook(extractor)
+        ).run()
+        # Force execution so the extractor captures the instruction log.
+        list(result.register_counts())
+        return extractor.shots[0].get_user_circuit()
+    finally:
+        loaded.cleanup()
+
+
 def line_col_to_offset(src: str, line: int, column: int) -> int:
     """Convert a 1-based line + 0-based column to a byte offset into `src`."""
     lines = src.splitlines(keepends=True)
