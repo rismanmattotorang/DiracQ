@@ -313,6 +313,14 @@ Reproducibility is a **measured** property: the same seeded workload must produc
 the same counts and resource profile across commits (G7). The benchmark harness
 fails CI on regression beyond tolerance.
 
+**Implemented (ADR-11):** `diracq_sidecar.bench` + `benchmarks.py` provide a
+seeded reference suite (`bell_smoke`, `emulate_4q_2k`, `hugr_compile_small`) that
+records p50/p95 and **fails on any p95 over budget** (`benchmarks/budgets.json`).
+It runs mock-backed in CI (the `bench` job) and against the real stack on demand
+(measured here: real Bell compile+emulate ≈ 158 ms p50, real HUGR compile ≈ 22 ms).
+CI also runs a **toolchain matrix** (stable + the pinned 1.95.0) with fmt, clippy
+`-D warnings`, check and the full test suite.
+
 ---
 
 ## 6. Risks & mitigations
