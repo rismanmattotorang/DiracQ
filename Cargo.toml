@@ -25,9 +25,12 @@ members = [
     "crates/diracq_mol",       # molecule viewer (fork crate, GPU)
     "crates/diracq_app",       # glue: registers panels/actions into the fork
 ]
-# The Guppy WASM extension is its own workspace (wasm32-wasip2 target,
-# zed_extension_api) and ships on an independent cadence (ADR-00).
-exclude = ["extensions/guppy"]
+# Excluded sub-workspaces, each on its own cadence (ADR-00):
+#  - the Guppy WASM extension (wasm32-wasip2 target, zed_extension_api)
+#  - diracq_gpui, which links the vendored GPUI (third_party/zed) and only
+#    builds after scripts/vendor-zed.sh — kept out so the standalone
+#    `cargo check --workspace` works when Zed is absent.
+exclude = ["extensions/guppy", "crates/diracq_gpui"]
 
 [workspace.package]
 version = "0.1.0"

@@ -20,7 +20,8 @@ DiracQ/
 │   ├── diracq_hugr/            # L6 — HUGR graph canvas        (fork crate, feature: gpui)
 │   ├── diracq_circuit/         # L6 — circuit canvas           (fork crate, feature: gpui)
 │   ├── diracq_mol/             # L6 — molecule viewer          (fork crate, feature: gpui)
-│   └── diracq_app/             # L1/L6 — glue: the entire fork delta (registers panels/actions)
+│   ├── diracq_app/             # L1/L6 — glue: the entire fork delta (registers panels/actions)
+│   └── diracq_gpui/            # L6 — real GPUI views (Render impls); EXCLUDED workspace, links vendored gpui
 ├── extensions/
 │   └── guppy/                  # L1 — Guppy WASM extension (zed_extension_api, own workspace)
 ├── sidecar/                    # L4 — Python JSON-RPC sidecar (Selene/TKET/HF/molecular)
@@ -48,6 +49,17 @@ Core (Rust)  --JSON-RPC 2.0 over length-prefixed stdio-->  Python sidecar / Athe
   (no id): `agent.progress`, `selene.shot`, `compile.metric`.
 - **OpenAPI facade:** the same operations are exposed by a loopback-only,
   token-gated REST facade so CI can drive compile/emulate without the GUI.
+
+## GPUI surfaces and the vendored Zed
+
+The real GPU views live in `crates/diracq_gpui` (Render impls for the emulation
+histogram, the circuit grid, and the HUGR graph). That crate links the **vendored
+GPUI** under `third_party/zed` (fetched by `scripts/vendor-zed.sh`) and is an
+*excluded* sub-workspace, so the main `cargo check --workspace` never needs Zed
+or a GPU. Build the surfaces with `scripts/build-gpui.sh` (installs the toolchain
++ Linux GPU/Wayland libs, then `cargo check`s the crate). The pure-Rust layout
+engines (`diracq_circuit`, `diracq_hugr`) and service layer (`diracq_selene`) do
+the off-thread work; `diracq_gpui` only draws.
 
 ## Why the additive design compiles before Zed is vendored
 

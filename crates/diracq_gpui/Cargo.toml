@@ -1,0 +1,25 @@
+# DiracQ GPUI views (Workstream C/D — the GPU surfaces).
+#
+# This crate is its OWN workspace and is EXCLUDED from the main DiracQ workspace
+# (root Cargo.toml `exclude`), exactly like extensions/guppy. It links the
+# vendored GPUI (third_party/zed, fetched by scripts/vendor-zed.sh) which uses
+# Zed's own workspace inheritance — so it can only build after Zed is vendored.
+# Keeping it out of the main workspace preserves the standalone
+# `cargo check --workspace` guarantee when Zed is absent.
+[package]
+name = "diracq_gpui"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+gpui = { path = "../../third_party/zed/crates/gpui" }
+diracq_services = { path = "../diracq_services" }
+diracq_viz = { path = "../diracq_viz" }
+diracq_selene = { path = "../diracq_selene" }
+
+# NOTE: no `[workspace]` here. To resolve gpui's workspace-inherited deps,
+# diracq_gpui is built *as a member of the vendored Zed workspace* — scripts/
+# build-gpui.sh registers it in third_party/zed/Cargo.toml. It is excluded from
+# the DiracQ root workspace so the standalone `cargo check --workspace` ignores it.
