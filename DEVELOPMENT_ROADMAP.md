@@ -212,9 +212,16 @@ Each maps to a crate/service with a typed interface and an acceptance test.
   `awaiting_approval` until approved). The **ACP `AthenaAgent`** supports parallel
   sessions, a streaming gate-aware `prompt`, and cancellation. Tested (7 cases)
   without langgraph/LLM.
+- **Real validation gate (verified):** `athena.validation.validate_program` runs
+  the gate over an injected `Services` boundary — **type-check → emulate →
+  classical-baseline compare** — naming the failing stage so the repair loop
+  knows what to fix. `sidecar_services()` wires it to the real guppylang check +
+  Selene emulate. Verified end-to-end with the real stack: a Bell brief flows
+  plan→…→code-gen→**real validate**→report with counts `{00: 497, 11: 503}`; a
+  type-erroring program is driven to repair then *rejected*, never "done".
 - **TODO:** bind to the `agent-client-protocol` stdio schema; wrap the nodes in
   the `langgraph` `StateGraph` (`graph.py`) for checkpointed runtime; replace the
-  offline `DefaultAgents` with real retriever/FM/code-gen/validate calls.
+  offline retriever/FM/code-gen/reporter stand-ins with real RAG/LLM calls.
 
 ### Workstream F — Document-to-circuit generation — *in progress (P3)*
 - **Seam:** An Athena tool backed by the HF sidecar (parsing/embedding) and
