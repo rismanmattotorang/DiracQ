@@ -276,9 +276,14 @@ Each maps to a crate/service with a typed interface and an acceptance test.
   **16→5 gates, 2→0 two-qubit gates, depth 11→3**. A Mermaid string is generated
   from the optimised circuit for the viewer. The mock still serves dev/CI.
   Verified against pytket 2.18.0 / guppylang 0.21.15.
-- **TODO:** slot the namespaced `dirac.chem` passes (UCC fusion / Pauli grouping)
-  ahead of the qsystem pass via `tket.passes.QSystemPass`; a CI check pinning
-  tket2/qsystem against upstream renames.
+- **qsystem prep wired (verified):** the Helios target now runs the real
+  `tket.passes.QSystemPass` on the compiled HUGR as the always-last step (Fig. 3);
+  the emitted Helios HUGR is genuinely transformed vs the generic one
+  (5648 B vs 3542 B on the Bell example). Guarded so non-qsystem programs still
+  compile. Verified against tket 0.13.1.
+- **TODO:** implement the namespaced `dirac.chem` rewrites (UCC fusion / Pauli
+  grouping) as a HUGR extension slotting *before* qsystem prep; a CI check
+  pinning tket2/qsystem against upstream renames.
 
 > With Workstreams A, B, C and H landed (mock-backed where the heavy stack isn't
 > installed), the **M2 "author → compile → emulate" loop is exercisable

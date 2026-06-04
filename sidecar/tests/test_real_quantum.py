@@ -124,6 +124,31 @@ def test_real_compile_optimisation_reduces_two_qubit_gates():
     assert after < before  # the redundant CX pair is removed by the real pass
 
 
+def test_real_compile_runs_qsystem_prep_on_hugr():
+    """The Helios target must run the real tket2 QSystemPass, which lowers/
+    expands the HUGR — so the emitted (prepped) HUGR differs from raw compile."""
+    import base64
+
+    from diracq_sidecar import _guppy_runtime as rt
+    from diracq_sidecar import compile_service as cs
+
+    helios = cs.compile_guppy({"guppy_src": _BELL, "target": "helios"})
+    generic = cs.compile_guppy({"guppy_src": _BELL, "target": "generic"})
+    prepped = base64.b64decode(helios["hugr_b64"])
+    raw = base64.b64decode(generic["hugr_b64"])
+    assert len(prepped) != len(raw)  # qsystem prep transformed the HUGR
+
+    # And QSystemPass genuinely runs on the package.
+    loaded = rt.load_guppy_module(_BELL)
+    try:
+        pkg = rt.select_entrypoint(loaded.module, _BELL).compile()
+        before_nodes = sum(1 for _ in pkg.modules[0])
+        assert cs._qsystem_prepare(pkg) is True
+        assert sum(1 for _ in pkg.modules[0]) != before_nodes
+    finally:
+        loaded.cleanup()
+
+
 def test_real_circuit_extract_yields_gates_and_measures():
     from diracq_sidecar import circuit_service as cz
 
