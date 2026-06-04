@@ -9,7 +9,7 @@ Run as a module to serve the bridge::
     python -m diracq_sidecar.guppy_worker --mock   # heuristic, for dev/CI without guppylang
 
 The Rust side spawns this and speaks 4-byte-length-prefixed JSON frames
-(``{"method","params"}`` → ``{"result"}`` / ``{"error"}``).
+(``{"method","params"}`` -> ``{"result"}`` / ``{"error"}``).
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from typing import Any
 
 from diracq_sidecar.server import read_message, write_message
 
-# Whether to answer with the pure-Python heuristic instead of guppylang.
+# Force the pure-Python heuristic instead of guppylang (set by --mock).
 _MOCK = False
 
 _QUANTUM_OPS = {
@@ -33,45 +33,113 @@ _ASSIGN = re.compile(r"\b([a-zA-Z_]\w*)\s*=(?!=)")
 def check(uri: str, src: str) -> list[dict[str, Any]]:
     """Type-check a buffer; return LSP-shaped diagnostics
     (message, severity, start, end byte offsets)."""
-    if _MOCK:
-        return _heuristic_check(src)
-    _require_guppylang()
-    # TODO(Workstream B): call guppy.check(); map error objects to ranges,
-    # surfacing linear-type/ownership errors (use-after-measure, implicit
-    # discard, aliasing).
-    raise NotImplementedError("guppy_worker.check: Workstream B (guppylang mapping)")
+    if _use_real():
+        return _real_check(src)
+    return _heuristic_check(src)
 
 
 def compile_summary(uri: str, src: str) -> dict[str, int]:
     """Compile to HUGR and return node/edge/qubit counts."""
-    if _MOCK:
-        return {"nodes": 0, "edges": 0, "qubits": src.count("qubit(")}
-    _require_guppylang()
-    raise NotImplementedError("guppy_worker.compile_summary: Workstream B")
+    if _use_real():
+        return _real_compile_summary(src)
+    return {"nodes": 0, "edges": 0, "qubits": src.count("qubit(")}
 
 
 def resources(uri: str, src: str) -> dict[str, int]:
+    summary = compile_summary(uri, src)
+    return {
+        "n_qubits": summary.get("qubits", 0),
+        "gate_count": summary.get("nodes", 0),
+        "two_qubit_gates": 0,
+        "depth": 0,
+    }
+
+
+# --- real guppylang path -----------------------------------------------------
+
+
+def _use_real() -> bool:
     if _MOCK:
-        return {
-            "n_qubits": src.count("qubit("),
-            "gate_count": 0,
-            "two_qubit_gates": 0,
-            "depth": 0,
-        }
-    _require_guppylang()
-    raise NotImplementedError("guppy_worker.resources: Workstream B")
+        return False
+    from diracq_sidecar import _guppy_runtime as rt
+
+    return rt.guppylang_available()
+
+
+def _real_check(src: str) -> list[dict[str, Any]]:
+    """Compile every Guppy definition in the buffer and map the first
+    guppylang error per definition to an LSP diagnostic with a precise range."""
+    from guppylang_internals.error import GuppyError  # type: ignore
+    from guppylang_internals.span import to_span  # type: ignore
+
+    from diracq_sidecar import _guppy_runtime as rt
+
+    try:
+        loaded = rt.load_guppy_module(src)
+    except SyntaxError as exc:  # a plain Python syntax error in the buffer
+        line = (exc.lineno or 1)
+        col = max((exc.offset or 1) - 1, 0)
+        off = rt.line_col_to_offset(src, line, col)
+        return [{"message": f"syntax error: {exc.msg}", "severity": "error", "start": off, "end": off + 1}]
+    except Exception as exc:  # NameError etc. while importing the buffer
+        return [{"message": f"load error: {exc}", "severity": "error", "start": 0, "end": 1}]
+
+    diags: list[dict[str, Any]] = []
+    seen: set[tuple[int, int]] = set()
+    try:
+        for _name, defn in rt.iter_guppy_defs(loaded.module, src):
+            try:
+                defn.compile()
+            except GuppyError as exc:
+                err = getattr(exc, "error", exc)
+                try:
+                    sp = to_span(err.span)
+                    start = rt.line_col_to_offset(src, sp.start.line, sp.start.column)
+                    end = rt.line_col_to_offset(src, sp.end.line, sp.end.column)
+                except Exception:
+                    start, end = 0, 1
+                if (start, end) in seen:
+                    continue
+                seen.add((start, end))
+                title = getattr(err, "rendered_title", None) or "Guppy error"
+                detail = getattr(err, "rendered_message", None)
+                message = f"{title}: {detail}" if detail else title
+                diags.append({"message": message, "severity": "error", "start": start, "end": end})
+            except Exception:
+                # Non-Guppy compile failure; skip this def (others may report).
+                continue
+    finally:
+        loaded.cleanup()
+    return diags
+
+
+def _real_compile_summary(src: str) -> dict[str, int]:
+    from diracq_sidecar import _guppy_runtime as rt
+
+    loaded = rt.load_guppy_module(src)
+    try:
+        entry = rt.select_entrypoint(loaded.module, src)
+        if entry is None:
+            return {"nodes": 0, "edges": 0, "qubits": 0}
+        pkg = entry.compile()
+        module0 = pkg.modules[0]
+        nodes = sum(1 for _ in module0)
+        edges = sum(1 for _ in module0.links()) if hasattr(module0, "links") else 0
+        return {"nodes": nodes, "edges": edges, "qubits": src.count("qubit(")}
+    finally:
+        loaded.cleanup()
+
+
+# --- pure-Python heuristic (mock / fallback) ---------------------------------
 
 
 def _heuristic_check(src: str) -> list[dict[str, Any]]:
     """A Python mirror of the Rust heuristic: flag use-after-measure /
-    double-measure. Used in --mock mode so the bridge is testable end-to-end
-    without guppylang installed."""
-    # Strip comments to byte-aligned spaces so offsets stay correct.
+    double-measure. Used in --mock mode and when guppylang is unavailable."""
     stripped = re.sub(r"#[^\n]*", lambda m: " " * len(m.group(0)), src)
     diags: list[dict[str, Any]] = []
     measured: dict[str, int] = {}
-    for m in _iter_tokens(stripped):
-        kind, name, start, end = m
+    for kind, name, s, e in _iter_tokens(stripped):
         if kind == "assign":
             measured.pop(name, None)
         elif kind == "call":
@@ -112,16 +180,6 @@ def _iter_tokens(src: str):
         yield kind, name, s, e
 
 
-def _require_guppylang() -> None:
-    try:
-        import guppylang  # noqa: F401
-    except ImportError as exc:  # pragma: no cover
-        raise RuntimeError(
-            "guppylang not installed; `pip install diracq-sidecar[quantum]` "
-            "(or run the worker with --mock)"
-        ) from exc
-
-
 _METHODS = {"check": check, "compile_summary": compile_summary, "resources": resources}
 
 
@@ -148,7 +206,6 @@ def serve() -> int:
 
 
 def _wrap(method: str, result: Any) -> Any:
-    # `check` returns a list; the Rust side expects {"diagnostics": [...]}.
     if method == "check":
         return {"diagnostics": result}
     return result

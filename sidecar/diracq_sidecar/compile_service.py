@@ -24,8 +24,12 @@ def compile_guppy(params: dict) -> dict[str, Any]:
 
     params mirror CompileRequest (guppy_src, opt_level, target, dirac_passes).
     Returns CompileResult (hugr_b64, mermaid, metrics_before, metrics_after).
+
+    Uses the real guppylang compiler when the source is genuine Guppy
+    (``@guppy``) and the stack is installed; otherwise the deterministic mock.
     """
-    if _tket_available():
+    src = params.get("guppy_src", "")
+    if "@guppy" in src and _guppy_available():
         return _compile_real(params)
     return _compile_mock(params)
 
@@ -55,26 +59,37 @@ def _compile_mock(params: dict) -> dict[str, Any]:
 
 
 def _compile_real(params: dict) -> dict[str, Any]:
-    _require_tket()
-    # TODO(Workstream H): guppy.compile -> tket2 passes (rebase, optimise,
-    # schedule) -> dirac.chem passes -> tket2-qsystem prep; emit mermaid +
-    # before/after ResourceMetrics.
-    raise NotImplementedError("tket.compile: Workstream H (real pytket/tket2)")
+    """Real Guppy->HUGR compile: emits the actual HUGR bytes (base64) and node/
+    qubit metrics from the compiled program. The tket2 optimisation passes
+    (the before/after entangling-gate reduction) and the Mermaid emission remain
+    the Workstream-H TODO, so before == after here."""
+    from diracq_sidecar import _guppy_runtime as rt
 
-
-def _tket_available() -> bool:
+    src = params["guppy_src"]
+    loaded = rt.load_guppy_module(src)
     try:
-        import pytket  # noqa: F401
+        entry = rt.select_entrypoint(loaded.module, src)
+        if entry is None:
+            return _compile_mock(params)
+        pkg = entry.compile()
+        hugr_b64 = base64.b64encode(pkg.to_bytes()).decode()
+        nodes = sum(1 for _ in pkg.modules[0])
+        qubits = src.count("qubit(")
+        metrics = {"n_qubits": qubits, "gate_count": nodes, "two_qubit_gates": 0, "depth": 0}
+        return {
+            "hugr_b64": hugr_b64,
+            "mermaid": "",  # TODO(Workstream H): tket2 circ.mermaid_string()
+            "metrics_before": metrics,
+            "metrics_after": metrics,
+        }
+    finally:
+        loaded.cleanup()
+
+
+def _guppy_available() -> bool:
+    try:
+        import guppylang  # noqa: F401
 
         return True
     except ImportError:
         return False
-
-
-def _require_tket() -> None:
-    try:
-        import pytket  # noqa: F401
-    except ImportError as exc:  # pragma: no cover
-        raise RuntimeError(
-            "pytket/tket2 not installed; `pip install diracq-sidecar[quantum]`"
-        ) from exc
