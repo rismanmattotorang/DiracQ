@@ -177,8 +177,17 @@ Each maps to a crate/service with a typed interface and an acceptance test.
   per-gate `span` for selection mapping; and `diracq_hugr::layout_dag` —
   longest-path rank assignment with per-rank rows and region-crossing edge
   detection for collapse/expand.
-- **TODO:** decode a real HUGR into `GateOp`s / nodes+edges; the GPUI `Element`s
-  (drawing, pan/zoom, hit-testing → editor selection) behind `--features gpui`.
+- **GPUI views built (verified):** `crates/diracq_gpui` provides real
+  `gpui::Render` implementations — `EmulationPanelView` (shot histogram),
+  `CircuitCanvasView` (wire×column gate grid from `CircuitLayout`), and
+  `HugrGraphView` (rank-positioned nodes from `GraphLayout`) — using GPUI 0.2.2's
+  element API. They **type-check against the real vendored gpui** (Zed pinned to
+  Rust 1.95.0) via `scripts/build-gpui.sh`, which stages the crate into the
+  vendored Zed workspace (gpui needs Zed's workspace inheritance). The crate is
+  excluded from the main workspace so `cargo check --workspace` still needs no GPU.
+- **TODO:** decode a real HUGR into `GateOp`s / nodes+edges; dock these views in
+  the Zed `Workspace` (the editor-binary integration); pan/zoom + hit-testing →
+  editor-selection via a custom `Element`; `selene.shot` live streaming.
 
 ### Workstream E — Athena as an ACP agent server — *in progress (P3)*
 - **Seam:** ACP agent server process `agents/athena` implementing the surface
