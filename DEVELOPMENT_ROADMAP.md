@@ -167,9 +167,14 @@ Each maps to a crate/service with a typed interface and an acceptance test.
   handlers; §12.2); `selene.emulate` streams `selene.shot` progress (running
   tallies) so the panel histogram fills live — verified on the mock path and
   emitted on the real path.
-- **TODO:** the GPUI histogram element is built (`diracq_gpui`); wire it to
-  consume live `selene.shot` events via the event bus in the editor binary; the
-  DiracNoise calibrated plugin.
+- **DiracNoise calibrated model (verified):** `error_model.kind = "dirac_calibrated"`
+  selects a Selene `DepolarizingErrorModel` at DiracQ's calibrated operating
+  point (built on Selene's documented plugin point; no internals modified). An
+  ideal Bell run yields only `00`/`11`; under DiracNoise a small fraction of
+  `01`/`10` error outcomes appears (e.g. `{00:1883, 01:122, 10:104, 11:1891}`) —
+  matching the §7.2 acceptance criterion.
+- **TODO:** wire the built `diracq_gpui` histogram to consume live `selene.shot`
+  events via the editor event bus (editor-binary integration).
 
 ### Workstream D — HUGR & circuit GPU canvases (fork crates) — *in progress (M3)*
 - **Seam:** Fork crates `crates/diracq_hugr` + `crates/diracq_circuit`, each a

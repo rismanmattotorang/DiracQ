@@ -67,13 +67,9 @@ def _emulate_real(params: dict, notify=None) -> dict[str, Any]:
             .with_shots(shots)
             .with_seed(seed)
         )
-        em = params.get("error_model") or {}
-        if em.get("kind") == "depolarizing":
-            builder = builder.with_error_model(
-                selene_sim.DepolarizingErrorModel(
-                    p_1q=float(em.get("p_1q", 0.0)), p_2q=float(em.get("p_2q", 0.0))
-                )
-            )
+        error_model = _build_error_model(params.get("error_model") or {})
+        if error_model is not None:
+            builder = builder.with_error_model(error_model)
         result = builder.run()
         counts = _collate_bitstrings(result)
         if notify is not None:
@@ -90,6 +86,33 @@ def _emulate_real(params: dict, notify=None) -> dict[str, Any]:
         }
     finally:
         loaded.cleanup()
+
+
+# DiracNoise (§7.2): the calibrated operating point DiracQ targets on Helios-class
+# hardware, so a validator "pass" is a fair rehearsal of a real run. Built on
+# Selene's documented DepolarizingErrorModel plugin point — no Selene internals
+# are modified.
+DIRACNOISE_CALIBRATION = {"p_1q": 1e-3, "p_2q": 1e-2}
+
+
+def _build_error_model(em: dict):
+    """Map an ErrorModelSpec to a Selene error-model plugin (or None for ideal)."""
+    import selene_sim
+
+    kind = em.get("kind", "none")
+    if kind == "none":
+        return None
+    if kind == "depolarizing":
+        return selene_sim.DepolarizingErrorModel(
+            p_1q=float(em.get("p_1q", 0.0)), p_2q=float(em.get("p_2q", 0.0))
+        )
+    if kind == "dirac_calibrated":
+        # Calibrated defaults, overridable per-request.
+        return selene_sim.DepolarizingErrorModel(
+            p_1q=float(em.get("p_1q", DIRACNOISE_CALIBRATION["p_1q"])),
+            p_2q=float(em.get("p_2q", DIRACNOISE_CALIBRATION["p_2q"])),
+        )
+    return None
 
 
 def _collate_bitstrings(result) -> dict[str, int]:
